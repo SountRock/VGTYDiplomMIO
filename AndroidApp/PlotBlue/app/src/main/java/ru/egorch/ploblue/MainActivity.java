@@ -57,12 +57,12 @@ public class MainActivity extends AppCompatActivity implements
     private static final int REQ_ENABLE_BT  = 10;
     public static final int BT_BOUNDED      = 21;
     public static final int BT_SEARCH       = 22;
-    //private static final long DELAY_TIMER   = 1;
+    private static final long DEVICE_DELAY = 10;
 
     private FrameLayout frameMessage;
     private LinearLayout frameControls;
 
-    private RelativeLayout frameLedControls;
+    private RelativeLayout frameGraphControls;
     private Button btnDisconnect;
     private EditText etConsole;
     private ImageView indicator;
@@ -83,6 +83,7 @@ public class MainActivity extends AppCompatActivity implements
 
     private GraphView gvGraph;
     private LineGraphSeries series;
+    private final int maxDataPointsOnGraph = 600;
 
     private String lastSensorValues = "";
 
@@ -90,6 +91,9 @@ public class MainActivity extends AppCompatActivity implements
     private Runnable timer;
 
     private int xLastValue = 0;
+
+    private Button btnSerialOn;
+    private Button btnSerialOff;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -104,7 +108,7 @@ public class MainActivity extends AppCompatActivity implements
         pbProgress       = findViewById(R.id.pb_progress);
         listBtDevices    = findViewById(R.id.lv_bt_device);
 
-        frameLedControls = findViewById(R.id.frameMessage);
+        frameGraphControls = findViewById(R.id.frameMessage);
         btnDisconnect    = findViewById(R.id.btn_disconnect);
         etConsole        = findViewById(R.id.et_console);
 
@@ -115,13 +119,19 @@ public class MainActivity extends AppCompatActivity implements
         //ПАРАМЕТРЫ ГРАФИКА
         gvGraph.addSeries(series);
         gvGraph.getViewport().setMinX(0.0);
-        gvGraph.getViewport().setMaxX(40.0);
+        gvGraph.getViewport().setMaxX(maxDataPointsOnGraph);
         gvGraph.getViewport().setMinY(0.0);
         gvGraph.getViewport().setMaxY(100.0);
         gvGraph.getViewport().setXAxisBoundsManual(true);
 
         //ИНИЦИАЛИЗАЦИЯ ИНДИКАТОРА РАБОТЫ
         indicator = findViewById(R.id.indicator);
+
+        //Инициализация кнопок упровлением записи
+        btnSerialOn = findViewById(R.id.serial_on);
+        btnSerialOff = findViewById(R.id.serial_off);
+        btnSerialOn.setOnClickListener(this);
+        btnSerialOff.setOnClickListener(this);
 
         switchEnableBt.setOnCheckedChangeListener(this);
         btnEnableSearch.setOnClickListener(this);
@@ -208,6 +218,10 @@ public class MainActivity extends AppCompatActivity implements
             }
 
             showFrameControls();
+        } else if (v.equals(btnSerialOn)) {
+            setSerialStatusOnDevice(true);
+        } else if (v.equals(btnSerialOff)) {
+            setSerialStatusOnDevice(false);
         }
     }
 
@@ -247,20 +261,29 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
+    /**
+     *  Показать панель для сообщения от устройства
+     */
     private void showFrameMessage() {
         frameMessage.setVisibility(View.VISIBLE);
-        frameLedControls.setVisibility(View.GONE);
+        frameGraphControls.setVisibility(View.GONE);
         frameControls.setVisibility(View.GONE);
     }
 
+    /**
+     * Показать панель для отображения доступных bluetooth подключений
+     */
     private void showFrameControls() {
         frameMessage.setVisibility(View.GONE);
-        frameLedControls.setVisibility(View.GONE);
+        frameGraphControls.setVisibility(View.GONE);
         frameControls.setVisibility(View.VISIBLE);
     }
 
-    private void showFrameLedControls() {
-        frameLedControls.setVisibility(View.VISIBLE);
+    /**
+     *  Показать панель для отображения графика
+     */
+    private void showFrameGraphControls() {
+        frameGraphControls.setVisibility(View.VISIBLE);
         frameMessage.setVisibility(View.GONE);
         frameControls.setVisibility(View.GONE);
     }
@@ -382,8 +405,10 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
+    /**
+     * Класс для подключеня к устройству по bluetooth
+     */
     private class ConnectThread extends Thread {
-
         private BluetoothSocket bluetoothSocket = null;
         private boolean success = false;
 
@@ -426,16 +451,23 @@ public class MainActivity extends AppCompatActivity implements
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        showFrameLedControls();
+                        showFrameGraphControls();
                     }
                 });
             }
         }
 
+        /**
+         * Проверить состояние bluetooth соединения
+         * @return
+         */
         public boolean isConnect() {
             return bluetoothSocket.isConnected();
         }
 
+        /**
+         * Закрыть сооденение bluetooth
+         */
         public void cancel() {
             try {
                 Log.d(TAG, "cancel: " + this.getClass().getSimpleName());
@@ -446,11 +478,14 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
+
+    /**
+     * Класс для работы с уже подключенным соединением  bluetooth
+     */
     private class ConnectedThread  extends  Thread {
 
         private final InputStream inputStream;
         private final OutputStream outputStream;
-
         private boolean isConnected = false;
 
         public ConnectedThread(BluetoothSocket bluetoothSocket) {
@@ -469,6 +504,9 @@ public class MainActivity extends AppCompatActivity implements
             isConnected = true;
         }
 
+        /**
+         * Запусить поток отслеживания сигнала bluetooth
+         */
         @Override
         public void run() {
             BufferedInputStream bis = new BufferedInputStream(inputStream);
@@ -500,6 +538,9 @@ public class MainActivity extends AppCompatActivity implements
             }
         }
 
+        /**
+         * Отправить сообщение по bluetooth
+         */
         public void write(String command) {
             byte[] bytes = command.getBytes();
             if (outputStream != null) {
@@ -512,6 +553,9 @@ public class MainActivity extends AppCompatActivity implements
             }
         }
 
+        /**
+         * Закрыть все потоки bluetooth
+         */
         public void cancel() {
             try {
                 isConnected = false;
@@ -523,6 +567,30 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
+
+    /**
+     * Включить или выключить запись сигнала датчиков
+     * @param status
+     */
+    private void setSerialStatusOnDevice(boolean status) {
+        if (connectedThread != null && connectThread.isConnect()) {
+            String command;
+
+            command = (status) ? "1" : "0";
+
+            //C учетом зажержки итераций устройства
+            long start = System.currentTimeMillis();
+            while (System.currentTimeMillis() - start < DEVICE_DELAY + 5){
+                connectedThread.write(command);
+            }
+        }
+    }
+
+    /**
+     * Распарсить bluetooth сообщение для дальнейшей обработки
+     * @param data
+     * @return parsed bluetooth message
+     */
     private HashMap<String, String> parseData(String data) {  //(VAL:3.56|TIME:23.40)
         HashMap<String, String> map = new HashMap();
 
@@ -559,6 +627,9 @@ public class MainActivity extends AppCompatActivity implements
         return null;
     }
 
+    /**
+     * Запуск потока таймера для обновления данных на GUI
+     */
     private void startTimer() {
         cancelTimer();
         handler = new Handler();
@@ -569,11 +640,15 @@ public class MainActivity extends AppCompatActivity implements
                 etConsole.setText(lastSensorValues);
                 etConsole.setMovementMethod(movementMethod);
 
+                //TODO Сделать оповещение о разрыве связи
+                //Toast.makeText(MainActivity.this, "CONNECTION LOST!", Toast.LENGTH_SHORT).show();
+
                 HashMap<String, String> dataSensor = parseData(lastSensorValues);
                 if (dataSensor != null) {
                     if (dataSensor.containsKey("VAL") && dataSensor.containsKey("TIME")) {
                         float temp = Float.parseFloat(dataSensor.get("VAL").toString());
-                        series.appendData(new DataPoint(xLastValue, temp), true, 40);
+                        series.appendData(new DataPoint(xLastValue, temp), true, maxDataPointsOnGraph);
+
                         //Toast.makeText(MainActivity.this, "TIME: " + dataSensor.get("TIME"), Toast.LENGTH_SHORT).show();
                     } else if(dataSensor.containsKey("STATUS")){
                         long decodeValue = Long.parseLong(dataSensor.get("STATUS"));
@@ -590,13 +665,14 @@ public class MainActivity extends AppCompatActivity implements
                     xLastValue++;
                 }
 
-
-                //handler.postDelayed(this, DELAY_TIMER);
                 handler.post(this);
             }
         });
     }
 
+    /**
+     * Остановка таймера
+     */
     private void cancelTimer() {
         if (handler != null) {
             handler.removeCallbacks(timer);

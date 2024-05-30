@@ -76,7 +76,12 @@ void loop() {
     lcd.setCursor(4, 0);
     lcd.print(RMS);
     Serial.println(RMS);
-    bluetoothPush.println(RMS);
+    bluetoothPush.print("(VAL:"); 
+    bluetoothPush.print(RMS);
+    bluetoothPush.print("|TIME:");
+    bluetoothPush.print(currentTime);
+    bluetoothPush.print(")");
+    bluetoothPush.println();
   }
   
   delay(10); 

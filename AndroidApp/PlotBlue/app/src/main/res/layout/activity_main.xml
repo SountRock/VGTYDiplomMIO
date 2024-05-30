@@ -80,7 +80,7 @@
 
         <EditText
             android:id="@+id/et_console"
-            android:layout_width="306dp"
+            android:layout_width="186dp"
             android:layout_height="wrap_content"
             android:layout_below="@+id/btn_disconnect"
             android:layout_marginTop="8dp"
@@ -89,23 +89,33 @@
             android:lines="4"
             android:scrollbars="vertical" />
 
-        <!--
-        <Switch
-            android:id="@+id/switch_led_red"
-            android:layout_below="@id/et_console"
-            android:text="@string/led_red"
-            android:textSize="18sp"
+        <Button
+            android:id="@+id/serial_on"
+            android:layout_below="@+id/btn_disconnect"
+            android:layout_toRightOf="@+id/indicator"
+            android:text="@string/serial_on"
+            android:textSize="15sp"
+            android:textColor="@color/color_green"
+            android:layout_width="70sp"
+            android:layout_height="50sp"
+            />
+
+        <Button
+            android:id="@+id/serial_off"
+            android:layout_below="@+id/serial_on"
+            android:layout_toRightOf="@+id/indicator"
+            android:text="@string/serial_off"
+            android:textSize="15sp"
             android:textColor="@color/color_red"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-        -->
+            android:layout_width="70sp"
+            android:layout_height="50sp"
+            />
 
         <ImageView
             android:id="@+id/indicator"
             android:layout_width="69dp"
             android:layout_height="69dp"
             android:layout_below="@+id/btn_disconnect"
-            android:layout_marginTop="30dp"
             android:layout_toRightOf="@+id/et_console"
             android:layout_centerHorizontal="true"
             android:layout_centerVertical="true"
