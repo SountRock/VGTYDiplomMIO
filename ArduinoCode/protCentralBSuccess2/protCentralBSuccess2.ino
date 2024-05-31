@@ -57,7 +57,7 @@ void loop() {
   tryCheckMessage(); //!!!
 
   if(writeSignal){
-    currentTime = millis()/1000;
+    currentTime = millis()/1000.0;
     lcd.setCursor(5, 1);
     lcd.print(currentTime);
 
@@ -105,17 +105,6 @@ void tryCheckMessage(){
     if(message == '0'){
       writeSignal = false; 
     }
-  }
-  //WRITE_OR_NOT//---------------------------------------------------
-}
-
-void analizeMessage(String message){
-  //WRITE_OR_NOT//---------------------------------------------------
-  if(message.equals("[START]")){
-    writeSignal = true; 
-  }
-  if(message.equals("[STOP]")){
-    writeSignal = false; 
   }
   //WRITE_OR_NOT//---------------------------------------------------
 }

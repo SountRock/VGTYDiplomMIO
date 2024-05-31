@@ -83,14 +83,17 @@ public class MainActivity extends AppCompatActivity implements
 
     private GraphView gvGraph;
     private LineGraphSeries series;
-    private final int maxDataPointsOnGraph = 600;
+    private final int maxDataPointsOnGraph = 20;
 
     private String lastSensorValues = "";
 
     private Handler handler;
     private Runnable timer;
 
-    private int xLastValue = 0;
+    //////////////////////////////////////////////////////
+    private float xLastValue = 0;
+    private float yLastValue = 0;
+    //////////////////////////////////////////////////////
 
     private Button btnSerialOn;
     private Button btnSerialOff;
@@ -580,7 +583,7 @@ public class MainActivity extends AppCompatActivity implements
 
             //C учетом зажержки итераций устройства
             long start = System.currentTimeMillis();
-            while (System.currentTimeMillis() - start < DEVICE_DELAY + 5){
+            while (System.currentTimeMillis() - start < DEVICE_DELAY * 2){
                 connectedThread.write(command);
             }
         }
@@ -610,14 +613,26 @@ public class MainActivity extends AppCompatActivity implements
         } else
             //Если это статусное сообщение
             if(lastSensorValues.indexOf('<') == 0 && lastSensorValues.indexOf('>') > 0){
-            char[] temp = data
+            char[] tempArr = data
                     .replaceAll("<", "")
-                    .replaceAll(">", "").toCharArray();
+                    .replaceAll(">", "")
+                    .toCharArray();
 
+            /*
             String value = "";
-            for(char t : temp){
+            for(char t : tempArr){
                 value += (int) t;
             }
+            // */
+            //*
+            String value = "";
+            for(char t : tempArr){
+                int temp = t;
+                if(temp > 32){
+                    value += t;
+                }
+            }
+            //*/
 
             map.put("STATUS", value);
 
@@ -626,6 +641,7 @@ public class MainActivity extends AppCompatActivity implements
 
         return null;
     }
+
 
     /**
      * Запуск потока таймера для обновления данных на GUI
@@ -646,23 +662,27 @@ public class MainActivity extends AppCompatActivity implements
                 HashMap<String, String> dataSensor = parseData(lastSensorValues);
                 if (dataSensor != null) {
                     if (dataSensor.containsKey("VAL") && dataSensor.containsKey("TIME")) {
-                        float temp = Float.parseFloat(dataSensor.get("VAL").toString());
-                        series.appendData(new DataPoint(xLastValue, temp), true, maxDataPointsOnGraph);
+                        float value = Float.parseFloat(dataSensor.get("VAL").toString());
+                        float time = Float.parseFloat(dataSensor.get("TIME").toString());
+                        if(time > xLastValue){
+                            series.appendData(new DataPoint(time, value), true, maxDataPointsOnGraph * 100);
+                        }
 
-                        //Toast.makeText(MainActivity.this, "TIME: " + dataSensor.get("TIME"), Toast.LENGTH_SHORT).show();
+                        yLastValue = value;
+                        xLastValue = time;
                     } else if(dataSensor.containsKey("STATUS")){
-                        long decodeValue = Long.parseLong(dataSensor.get("STATUS"));
+                        String statusValue = dataSensor.get("STATUS");
                         //Код статуса ON
-                        if(decodeValue == 79781310L){
+                        if(statusValue.equals("ON")){
                             indicator.setImageResource(R.drawable.indicatoron);
                         } else
                             //Код статуса OFF
-                            if(decodeValue == 7970701310L){
-                            indicator.setImageResource(R.drawable.indicatoroff);
+                            if(statusValue.equals("OFF")){
+                                indicator.setImageResource(R.drawable.indicatoroff);
                         }
-
+                    } else {
+                        series.appendData(new DataPoint(xLastValue + 0.5, yLastValue), true, maxDataPointsOnGraph);
                     }
-                    xLastValue++;
                 }
 
                 handler.post(this);

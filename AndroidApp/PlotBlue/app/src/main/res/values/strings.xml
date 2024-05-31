@@ -8,7 +8,7 @@
     <string name="disconnect">Отключиться</string>
     <string name="connecting">Соединение...</string>
     <string name="please_wait">Подождите, пожалуйста...</string>
-    <string name="serial_off">Выкл</string>
-    <string name="serial_on">Вкл</string>
+    <string name="serial_off">Stop</string>
+    <string name="serial_on">Start</string>
 
 </resources>
