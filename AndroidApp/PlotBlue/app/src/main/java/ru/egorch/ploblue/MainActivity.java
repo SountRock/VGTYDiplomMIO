@@ -83,7 +83,7 @@ public class MainActivity extends AppCompatActivity implements
 
     private GraphView gvGraph;
     private LineGraphSeries series;
-    private final int maxDataPointsOnGraph = 20;
+    private final int maxDataPointsOnGraph = 50;
 
     private String lastSensorValues = "";
 
