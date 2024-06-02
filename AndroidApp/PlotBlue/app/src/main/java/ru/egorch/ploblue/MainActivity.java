@@ -90,10 +90,7 @@ public class MainActivity extends AppCompatActivity implements
     private Handler handler;
     private Runnable timer;
 
-    //////////////////////////////////////////////////////
     private float xLastValue = 0;
-    private float yLastValue = 0;
-    //////////////////////////////////////////////////////
 
     private Button btnSerialOn;
     private Button btnSerialOff;
@@ -171,6 +168,9 @@ public class MainActivity extends AppCompatActivity implements
 
     }
 
+    /**
+     * Возобновить работу приложения
+     */
     @Override
     protected void onPause() {
         super.onPause();
@@ -178,6 +178,9 @@ public class MainActivity extends AppCompatActivity implements
         cancelTimer();
     }
 
+    /**
+     * Поставить в режим ожидания
+     */
     @Override
     protected void onResume() {
         super.onResume();
@@ -204,7 +207,10 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
-    //@RequiresApi(api = Build.VERSION_CODES.M)
+    /**
+     * Метод для отслеживания нажатия кнопок
+     * @param v
+     */
     @Override
     public void onClick(View v) {
         if (v.equals(btnEnableSearch)) {
@@ -228,6 +234,13 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
+    /**
+     * Отслеживает нажатие на элемент списка устройств (отслежтвает выбор)
+     * @param parent
+     * @param view
+     * @param position
+     * @param id
+     */
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         if (parent.equals(listBtDevices)) {
@@ -241,6 +254,11 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
+    /**
+     * Методя для отслежтвания состояния переключателей
+     * @param buttonView
+     * @param isChecked
+     */
     @Override
     public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
         if (buttonView.equals(switchEnableBt)) {
@@ -252,6 +270,12 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
+    /**
+     *
+     * @param requestCode
+     * @param resultCode
+     * @param data
+     */
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         if (requestCode == REQ_ENABLE_BT) {
@@ -291,6 +315,9 @@ public class MainActivity extends AppCompatActivity implements
         frameControls.setVisibility(View.GONE);
     }
 
+    /**
+     *  Метод для включения и отключения
+     */
     private void enableBt(boolean flag) {
         if (flag) {
             Intent intent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
@@ -300,6 +327,10 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
+    /**
+     * Метод для отображения статуса устройтв (для понимания доступны ли сейчас они)
+     * @param type
+     */
     private void setListAdapter(int type) {
 
         bluetoothDevices.clear();
@@ -318,6 +349,10 @@ public class MainActivity extends AppCompatActivity implements
         listBtDevices.setAdapter(listAdapter);
     }
 
+    /**
+     * Возвращает список доступных устройств
+     * @return
+     */
     private ArrayList<BluetoothDevice> getBoundedBtDevices() {
         Set<BluetoothDevice> deviceSet = bluetoothAdapter.getBondedDevices();
         ArrayList<BluetoothDevice> tmpArrayList = new ArrayList<>();
@@ -331,7 +366,9 @@ public class MainActivity extends AppCompatActivity implements
     }
 
 
-    @RequiresApi(api = Build.VERSION_CODES.M)
+    /**
+     * Активировать поиск устройств или отключить
+     */
     private void enableSearch() {
         if (bluetoothAdapter.isDiscovering()) {
             bluetoothAdapter.cancelDiscovery();
@@ -341,6 +378,9 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
+    /**
+     * Явная реализация итерфейса для отслеживания статуса подключения
+     */
     private BroadcastReceiver receiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -389,6 +429,13 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
+
+    /**
+     * Метод для обработки результата запроса разрешений от устройства
+     * @param requestCode
+     * @param permissions
+     * @param grantResults
+     */
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
         switch (requestCode) {
@@ -618,13 +665,7 @@ public class MainActivity extends AppCompatActivity implements
                     .replaceAll(">", "")
                     .toCharArray();
 
-            /*
-            String value = "";
-            for(char t : tempArr){
-                value += (int) t;
-            }
-            // */
-            //*
+            //Для того чтобы убрать нежелательные символы которые трудно отследить
             String value = "";
             for(char t : tempArr){
                 int temp = t;
@@ -632,7 +673,6 @@ public class MainActivity extends AppCompatActivity implements
                     value += t;
                 }
             }
-            //*/
 
             map.put("STATUS", value);
 
@@ -668,7 +708,6 @@ public class MainActivity extends AppCompatActivity implements
                             series.appendData(new DataPoint(time, value), true, maxDataPointsOnGraph * 100);
                         }
 
-                        yLastValue = value;
                         xLastValue = time;
                     } else if(dataSensor.containsKey("STATUS")){
                         String statusValue = dataSensor.get("STATUS");
@@ -680,8 +719,6 @@ public class MainActivity extends AppCompatActivity implements
                             if(statusValue.equals("OFF")){
                                 indicator.setImageResource(R.drawable.indicatoroff);
                         }
-                    } else {
-                        series.appendData(new DataPoint(xLastValue + 0.5, yLastValue), true, maxDataPointsOnGraph);
                     }
                 }
 

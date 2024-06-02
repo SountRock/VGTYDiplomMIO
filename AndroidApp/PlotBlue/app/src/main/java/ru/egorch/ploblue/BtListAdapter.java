@@ -11,6 +11,9 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 
+/**
+ * Класс для предоставления списка устройств для подключения через Bluetooth
+ */
 public class BtListAdapter extends BaseAdapter {
 
     private static final int RESOURCE_LAYOUT = R.layout.list_item;
@@ -40,6 +43,9 @@ public class BtListAdapter extends BaseAdapter {
         return position;
     }
 
+    /**
+     * Метод для получения настроенного экземпляра вида списка доступных устройств
+     */
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
         View view = inflater.inflate(RESOURCE_LAYOUT, parent, false);

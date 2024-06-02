@@ -16,66 +16,70 @@ float EMGVal = 0;
 //analize
 float currentTime = 0.0;
 float RMS = 0.0;
-int RMSNumberOfSamples = 5;
+const int RMSNumberOfSamples = 5;
 float arrRMS[100];
 int countRMS = 0;
 
 //filter
 const int NUM_READ = 10; 
-float k = 0.4;  // коэффициент фильтрации, 0.0-1.0
+float k = 0.4;  // filtration coefficient, 0.0-1.0
 float Klf = 0.1;
 float Khf = 0.9;
 float EMGValc = 0;
 float K0 = 0.0;
 float K1 = 0.0;
 
-LiquidCrystal_I2C lcd(0x27,16,2);  // Устанавливаем дисплей
+LiquidCrystal_I2C lcd(0x27,16,2);  
+
 void setup()
 {
+  //Initalization Bluetooth
   bluetoothPush.begin(9600); 
   bluetoothPull.begin(9600); 
   pinMode(rxPin, INPUT);
   pinMode(txPin, OUTPUT);
 
+  //Initalization Serial
   Serial.begin(9600);
   pinMode(A1, INPUT);
 
+  //Initalization LCD display
   lcd.begin(16, 2);
   lcd.init();                     
   lcd.backlight();
-
   lcd.setCursor(0, 1);
   lcd.print("time:");
-
   lcd.setCursor(0, 0);
   lcd.print("RMS:");
 }
 
 void loop() {
-  //Part4: view signal through bluetooth
+  //Part1: view signal through bluetooth
   printStatus();
-  tryCheckMessage(); //!!!
+  tryCheckMessage(); 
 
   if(writeSignal){
     currentTime = millis()/1000.0;
     lcd.setCursor(5, 1);
     lcd.print(currentTime);
 
-    //Part1: get a signal after filtering high and low frequencies
+    //Part2: get a signal after filtering high and low frequencies
     EMGVal = analogRead(EMGPin);
     EMGValc = DCRemover(EMGVal);  // Highpass
     EMGVal = LPF(abs(EMGValc), EMGVal, Klf); // Lowpass 
   
-    //Part2: calculate parametrs
+    //Part3: calculate parametrs
     calcRMS(); 
   
-    //Part3: filtering out the signal
+    //Part4: filtering out the signal
     RMS = optimalRunningArithmeticFilter(RMS);
 
     //Part5: view signal on display
     lcd.setCursor(4, 0);
     lcd.print(RMS);
     Serial.println(RMS);
+
+    //Bluetooth view
     bluetoothPush.print("(VAL:"); 
     bluetoothPush.print(RMS);
     bluetoothPush.print("|TIME:");
@@ -87,6 +91,10 @@ void loop() {
   delay(10); 
 }
 
+
+/**
+  * sending status via bluetooth to another device
+*/
 void printStatus(){
   if(writeSignal){
     bluetoothPush.println("<ON>");
@@ -95,6 +103,9 @@ void printStatus(){
   }
 }
 
+/**
+  * the method attempts to recognize a command from another device
+*/
 void tryCheckMessage(){
   //WRITE_OR_NOT//---------------------------------------------------
   char message = bluetoothPull.read();
@@ -118,9 +129,9 @@ void calcRMS(){
       countRMS = 0;
       float sum = 0;
       for(int i = 0; i < RMSNumberOfSamples; i++){
-        sum += arrRMS[i];
+        sum += arrRMS[i] * arrRMS[i];
       }
-      RMS = sum / sizeof(arrRMS);
+      RMS = sqrt(sum / sizeof(arrRMS));
 
       free(arrRMS);
     } else {
