@@ -21,7 +21,7 @@
         android:id="@+id/frame_message"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:visibility="visible">
+        android:visibility="gone">
 
         <TextView
             android:id="@+id/tv_message"
@@ -66,7 +66,7 @@
 
     <RelativeLayout
         android:id="@+id/frameMessage"
-        android:visibility="gone"
+        android:visibility="visible"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
@@ -81,7 +81,7 @@
         <EditText
             android:id="@+id/et_console"
             android:layout_width="186dp"
-            android:layout_height="wrap_content"
+            android:layout_height="60dp"
             android:layout_below="@+id/btn_disconnect"
             android:layout_marginTop="8dp"
             android:editable="false"
@@ -89,15 +89,80 @@
             android:lines="4"
             android:scrollbars="vertical" />
 
+        <!-- Record Timer ######################### -->
+        <TextView
+            android:id="@+id/delay_record_label"
+            android:layout_width="100sp"
+            android:layout_height="40sp"
+            android:layout_below="@+id/et_console"
+            android:text="@string/delay"
+            android:textSize="15sp"
+            android:layout_alignParentLeft="true"
+            />
+        <EditText
+            android:id="@+id/et_delay_record"
+            android:layout_width="100dp"
+            android:layout_height="50dp"
+            android:layout_below="@+id/delay_record_label"
+            android:layout_marginTop="8dp"
+            android:editable="true"
+            android:gravity="bottom"
+            android:lines="4"
+            android:scrollbars="vertical" />
+
+        <TextView
+            android:id="@+id/end_record_label"
+            android:layout_width="100sp"
+            android:layout_height="40sp"
+            android:layout_below="@+id/et_console"
+            android:layout_toRightOf="@+id/et_delay_record"
+            android:text="@string/end_record"
+            android:textSize="15sp"
+            />
+        <EditText
+            android:id="@+id/et_end_record"
+            android:layout_width="100dp"
+            android:layout_height="50dp"
+            android:layout_marginTop="8dp"
+            android:editable="true"
+            android:gravity="bottom"
+            android:layout_below="@+id/end_record_label"
+            android:layout_toRightOf="@+id/et_delay_record"
+            android:lines="4"
+            android:scrollbars="vertical" />
+
+        <TextView
+            android:id="@+id/timer_record_label"
+            android:layout_width="100sp"
+            android:layout_height="40sp"
+            android:layout_below="@+id/et_console"
+            android:layout_toRightOf="@+id/et_end_record"
+            android:text="@string/timer_record"
+            android:textSize="15sp"
+            />
+        <EditText
+            android:id="@+id/et_timer_record"
+            android:layout_width="100dp"
+            android:layout_height="50dp"
+            android:layout_marginTop="8dp"
+            android:editable="false"
+            android:gravity="bottom"
+            android:layout_below="@+id/timer_record_label"
+            android:layout_toRightOf="@+id/et_end_record"
+            android:lines="4"
+            android:scrollbars="vertical" />
+
+        <!-- Record Timer ######################### -->
+
         <Button
             android:id="@+id/serial_on"
             android:layout_below="@+id/btn_disconnect"
             android:layout_toRightOf="@+id/indicator"
             android:text="@string/serial_on"
-            android:textSize="15sp"
+            android:textSize="10sp"
             android:textColor="@color/color_green"
             android:layout_width="70sp"
-            android:layout_height="50sp"
+            android:layout_height="30sp"
             />
 
         <Button
@@ -105,16 +170,16 @@
             android:layout_below="@+id/serial_on"
             android:layout_toRightOf="@+id/indicator"
             android:text="@string/serial_off"
-            android:textSize="15sp"
+            android:textSize="10sp"
             android:textColor="@color/color_red"
             android:layout_width="70sp"
-            android:layout_height="50sp"
+            android:layout_height="30sp"
             />
 
         <ImageView
             android:id="@+id/indicator"
-            android:layout_width="69dp"
-            android:layout_height="69dp"
+            android:layout_width="59dp"
+            android:layout_height="59dp"
             android:layout_below="@+id/btn_disconnect"
             android:layout_toRightOf="@+id/et_console"
             android:layout_centerHorizontal="true"
@@ -124,11 +189,22 @@
         <TextView
             android:id="@+id/y_label"
             android:layout_width="100sp"
-            android:layout_height="30sp"
-            android:layout_below="@+id/et_console"
+            android:layout_height="40sp"
+            android:layout_below="@+id/et_delay_record"
             android:text="@string/y_label"
             android:textSize="15sp"
             android:layout_alignParentLeft="true"
+            />
+
+        <EditText
+            android:id="@+id/et_record_name"
+            android:layout_width="match_parent"
+            android:layout_height="40sp"
+            android:layout_below="@+id/et_delay_record"
+            android:layout_toRightOf="@+id/y_label"
+            android:editable="true"
+            android:text="@string/name_record"
+            android:textSize="15sp"
             />
 
         <TextView

@@ -1,5 +1,6 @@
 package ru.egorch.ploblue;
 
+import android.Manifest;
 import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -10,6 +11,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.os.Environment;
 import android.os.Handler;
 import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
@@ -37,14 +39,20 @@ import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
 
 import java.io.BufferedInputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
+
+import ru.egorch.ploblue.wav.WavFile;
+import ru.egorch.ploblue.wav.WavFileException;
 
 public class MainActivity extends AppCompatActivity implements
         CompoundButton.OnCheckedChangeListener,
@@ -94,6 +102,19 @@ public class MainActivity extends AppCompatActivity implements
 
     private Button btnSerialOn;
     private Button btnSerialOff;
+
+
+    //Запись образца/////
+    //private FileWriter saverWave;
+    private List<Double> wave;
+    private RecordStatus recordStatus = RecordStatus.END;
+    private double recordEndTime = 0.0;
+    private double recordDelay = 0.0;
+    ///////
+    private EditText etRecordName;
+    private EditText etRecordDelay;
+    private EditText etRecordEndTime;
+    private EditText etRecordCurrentTime;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -166,6 +187,12 @@ public class MainActivity extends AppCompatActivity implements
             setListAdapter(BT_BOUNDED);
         }
 
+        //Инициализация массива содержащего волну
+        wave = new ArrayList<>();
+        etRecordName = findViewById(R.id.et_record_name);
+        etRecordDelay = findViewById(R.id.et_delay_record);
+        etRecordEndTime = findViewById(R.id.et_end_record);
+        etRecordCurrentTime = findViewById(R.id.et_timer_record);;
     }
 
     /**
@@ -411,16 +438,16 @@ public class MainActivity extends AppCompatActivity implements
      * Запрос на разрешение данных о местоположении (для Marshmallow 6.0)
      */
     private void accessLocationPermission() {
-        int accessCoarseLocation = this.checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION);
-        int accessFineLocation   = this.checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION);
+        int accessCoarseLocation = this.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION);
+        int accessFineLocation   = this.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION);
 
         List<String> listRequestPermission = new ArrayList<String>();
 
         if (accessCoarseLocation != PackageManager.PERMISSION_GRANTED) {
-            listRequestPermission.add(android.Manifest.permission.ACCESS_COARSE_LOCATION);
+            listRequestPermission.add(Manifest.permission.ACCESS_COARSE_LOCATION);
         }
         if (accessFineLocation != PackageManager.PERMISSION_GRANTED) {
-            listRequestPermission.add(android.Manifest.permission.ACCESS_FINE_LOCATION);
+            listRequestPermission.add(Manifest.permission.ACCESS_FINE_LOCATION);
         }
 
         if (!listRequestPermission.isEmpty()) {
@@ -637,6 +664,95 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
+     * Подготовиться к записи образца
+     */
+    private void prepareFromRecordingToWav(){
+        try {
+            String temp = String.valueOf(etRecordEndTime.getText());
+            recordEndTime = Double.parseDouble(temp);
+
+            temp = String.valueOf(etRecordDelay.getText());
+            recordDelay = Double.parseDouble(temp);
+
+            recordStatus = RecordStatus.PREPARE;
+
+            etRecordDelay.setEnabled(false);
+        } catch (NumberFormatException e){
+            Toast.makeText(MainActivity.this, "PARAMETERS RECORD ERROR!!!", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    /**
+     * Декремент таймера задержки записи образца
+     */
+    private void decrementRecordDelay(){
+        if(recordStatus == RecordStatus.PREPARE){
+            try {
+                String temp = String.valueOf(etRecordDelay.getText());
+                double currentDelayTimeValue = Double.parseDouble(temp);
+                if(currentDelayTimeValue <= recordDelay){
+                    currentDelayTimeValue--;
+                    etRecordDelay.setText(currentDelayTimeValue + "");
+                } else {
+                    recordStatus = RecordStatus.PROCESS;
+                }
+            } catch (NumberFormatException e) {
+                Toast.makeText(MainActivity.this, "PROCESS DELAY RECORD ERROR!!!", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    /**
+     * Икремент таймера записи образца
+     */
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    private void incrementRecordTime(){
+        if(recordStatus == RecordStatus.PROCESS){
+            try {
+                String temp = String.valueOf(etRecordCurrentTime.getText());
+                double currentTimeValue = Double.parseDouble(temp);
+                if(currentTimeValue <= recordEndTime){
+                    currentTimeValue++;
+                    etRecordDelay.setText(currentTimeValue + "");
+                } else {
+                    recordStatus = RecordStatus.END;
+
+                    boolean statusSave = saveWave();
+                    if(statusSave){
+                        Toast.makeText(MainActivity.this, "SUCCESSFULLY SAVE!", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(MainActivity.this, "FAILED SAVE!", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            } catch (NumberFormatException e) {
+                Toast.makeText(MainActivity.this, "PROCESS TIME RECORD ERROR!!!", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+
+    /**
+     * Сохранить образец
+     */
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    private boolean saveWave(){
+        String pathParent = Environment.getExternalStorageDirectory() + "/MRecord/samples/";
+        String pathChild = (etRecordName.getText() + LocalDateTime.now().toString() + ".wav")
+                .replaceAll(":", "T")
+                .replaceAll("\\.", "T");
+
+        try {
+            WavSaver.save(wave, recordEndTime, pathParent, pathChild);
+
+            recordStatus = RecordStatus.END;
+            return true;
+        } catch (IOException | WavFileException e) {
+            recordStatus = RecordStatus.END;
+            return false;
+        }
+    }
+
+    /**
      * Распарсить bluetooth сообщение для дальнейшей обработки
      * @param data
      * @return parsed bluetooth message
@@ -714,6 +830,7 @@ public class MainActivity extends AppCompatActivity implements
                         //Код статуса ON
                         if(statusValue.equals("ON")){
                             indicator.setImageResource(R.drawable.indicatoron);
+
                         } else
                             //Код статуса OFF
                             if(statusValue.equals("OFF")){

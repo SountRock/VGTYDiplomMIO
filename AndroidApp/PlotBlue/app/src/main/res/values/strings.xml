@@ -12,4 +12,9 @@
     <string name="serial_on">Start</string>
     <string name="y_label">Am, V</string>
     <string name="x_label">t, 10 ms</string>
+
+    <string name="delay">Delay</string>
+    <string name="end_record">Record End Time</string>
+    <string name="timer_record">Current Time Value</string>
+    <string name="name_record">RecordOne</string>
 </resources>
