@@ -17,4 +17,5 @@
     <string name="end_record">Record End Time</string>
     <string name="timer_record">Current Time Value</string>
     <string name="name_record">RecordOne</string>
+    <string name="duration_record">Durat</string>
 </resources>

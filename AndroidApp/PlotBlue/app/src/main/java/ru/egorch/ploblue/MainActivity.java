@@ -19,6 +19,8 @@ import android.support.annotation.RequiresApi;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.text.method.MovementMethod;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
@@ -113,11 +115,13 @@ public class MainActivity extends AppCompatActivity implements
     private double recordDelay = 0.0;
     private long startTimeDelay = 0;
     private long startTimeRecord = 0;
+    private double durationRecord = 0.0;
     ///////
     private EditText etRecordName;
     private EditText etRecordDelay;
     private EditText etRecordEndTime;
     private EditText etRecordCurrentTime;
+    private EditText etDurationRecord;
     private Button recordButton;
 
     @Override
@@ -196,7 +200,20 @@ public class MainActivity extends AppCompatActivity implements
         etRecordName = findViewById(R.id.et_record_name);
         etRecordDelay = findViewById(R.id.et_delay_record);
         etRecordEndTime = findViewById(R.id.et_end_record);
+        etRecordEndTime.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+                etDurationRecord.setText(editable);
+            }
+        });
         etRecordCurrentTime = findViewById(R.id.et_timer_record);
+        etDurationRecord = findViewById(R.id.et_duration_record);
         recordButton = findViewById(R.id.record_btn);
         recordButton.setText("ON");
         recordButton.setTextColor(getApplication().getResources().getColor(R.color.color_green));
@@ -724,6 +741,10 @@ public class MainActivity extends AppCompatActivity implements
             recordButton.setText("OFF");
             recordButton.setTextColor(getApplication().getResources().getColor(R.color.color_red));
 
+            temp = String.valueOf(etDurationRecord.getText());
+            durationRecord = Double.parseDouble(temp);
+            etDurationRecord.setEnabled(false);
+
             Toast.makeText(MainActivity.this, "__DELAY PHASE__", Toast.LENGTH_SHORT).show();
         } catch (NumberFormatException e){
             Toast.makeText(MainActivity.this, "PARAMETERS RECORD ERROR!!!", Toast.LENGTH_SHORT).show();
@@ -739,11 +760,11 @@ public class MainActivity extends AppCompatActivity implements
                 long time = (System.currentTimeMillis() - startTimeDelay);
                 int second = (int) (time / 1000);
                 int millisecond = (int) (time % 1000);
-                String temp = second + "." + (millisecond + "").substring(0,1);
+                String temp = second + "." + millisecond;
 
                 double currentDelayTimeValue = recordDelay - Double.parseDouble(temp);
                 if(currentDelayTimeValue >= 0.0){
-                    etRecordDelay.setText(currentDelayTimeValue + "");
+                    etRecordDelay.setText(String.format("%.2f", currentDelayTimeValue));
                 } else {
                     etRecordDelay.setText("0.0");
 
@@ -812,7 +833,7 @@ public class MainActivity extends AppCompatActivity implements
         String pathChild = etRecordName.getText() + ".wav";
 
         try {
-            WavFile isSave = WavSaver.save(wave, recordEndTime, pathParent, pathChild, this);
+            WavFile isSave = WavSaver.save(wave, durationRecord, pathParent, pathChild, this);
 
             return isSave != null ? true : false;
         } catch (IOException | WavFileException e) {
