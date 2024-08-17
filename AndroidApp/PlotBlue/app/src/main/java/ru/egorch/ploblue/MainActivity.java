@@ -44,14 +44,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 
-import ru.egorch.ploblue.wav.WavFile;
 import ru.egorch.ploblue.wav.WavFileException;
 
 public class MainActivity extends AppCompatActivity implements
@@ -110,11 +108,14 @@ public class MainActivity extends AppCompatActivity implements
     private RecordStatus recordStatus = RecordStatus.END;
     private double recordEndTime = 0.0;
     private double recordDelay = 0.0;
+    private long startTimeDelay = 0;
+    private long startTimeRecord = 0;
     ///////
     private EditText etRecordName;
     private EditText etRecordDelay;
     private EditText etRecordEndTime;
     private EditText etRecordCurrentTime;
+    private Button recordButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -192,7 +193,9 @@ public class MainActivity extends AppCompatActivity implements
         etRecordName = findViewById(R.id.et_record_name);
         etRecordDelay = findViewById(R.id.et_delay_record);
         etRecordEndTime = findViewById(R.id.et_end_record);
-        etRecordCurrentTime = findViewById(R.id.et_timer_record);;
+        etRecordCurrentTime = findViewById(R.id.et_timer_record);
+        recordButton = findViewById(R.id.record_btn);
+        recordButton.setText("ON");
     }
 
     /**
@@ -238,6 +241,7 @@ public class MainActivity extends AppCompatActivity implements
      * Метод для отслеживания нажатия кнопок
      * @param v
      */
+    @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     public void onClick(View v) {
         if (v.equals(btnEnableSearch)) {
@@ -258,6 +262,9 @@ public class MainActivity extends AppCompatActivity implements
             setSerialStatusOnDevice(true);
         } else if (v.equals(btnSerialOff)) {
             setSerialStatusOnDevice(false);
+        } else if (v.equals(recordButton)) {
+            Toast.makeText(MainActivity.this, "__PREPARE PHASE__", Toast.LENGTH_SHORT).show();
+            prepareFromRecordingToWav();
         }
     }
 
@@ -663,6 +670,25 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
+    ///////////////////////////////////////////////////////////////////////////////
+    /**
+     * Включить запись
+     */
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    private void record(){
+        boolean isDelay = decrementRecordDelay();
+        if(isDelay){
+            Toast.makeText(MainActivity.this, "__DELAY PHASE__", Toast.LENGTH_SHORT).show();
+        } else {
+            boolean isRecord = incrementRecordTime();
+            if(isRecord) {
+                Toast.makeText(MainActivity.this, "__RECORD PHASE__", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(MainActivity.this, "__RECORD END__", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
     /**
      * Подготовиться к записи образца
      */
@@ -670,13 +696,14 @@ public class MainActivity extends AppCompatActivity implements
         try {
             String temp = String.valueOf(etRecordEndTime.getText());
             recordEndTime = Double.parseDouble(temp);
+            etRecordCurrentTime.setText("0.0");
 
             temp = String.valueOf(etRecordDelay.getText());
             recordDelay = Double.parseDouble(temp);
+            etRecordDelay.setEnabled(false);
+            startTimeDelay = System.currentTimeMillis();
 
             recordStatus = RecordStatus.PREPARE;
-
-            etRecordDelay.setEnabled(false);
         } catch (NumberFormatException e){
             Toast.makeText(MainActivity.this, "PARAMETERS RECORD ERROR!!!", Toast.LENGTH_SHORT).show();
         }
@@ -685,13 +712,16 @@ public class MainActivity extends AppCompatActivity implements
     /**
      * Декремент таймера задержки записи образца
      */
-    private void decrementRecordDelay(){
+    private boolean decrementRecordDelay(){
         if(recordStatus == RecordStatus.PREPARE){
             try {
-                String temp = String.valueOf(etRecordDelay.getText());
-                double currentDelayTimeValue = Double.parseDouble(temp);
-                if(currentDelayTimeValue <= recordDelay){
-                    currentDelayTimeValue--;
+                long time = (System.currentTimeMillis() - startTimeDelay);
+                int second = (int) (time / 1000);
+                int millisecond = (int) (time % 1000);
+                String temp = second + "." + millisecond;
+
+                double currentDelayTimeValue = recordDelay - Double.parseDouble(temp);
+                if(currentDelayTimeValue >= 0.0){
                     etRecordDelay.setText(currentDelayTimeValue + "");
                 } else {
                     recordStatus = RecordStatus.PROCESS;
@@ -699,6 +729,10 @@ public class MainActivity extends AppCompatActivity implements
             } catch (NumberFormatException e) {
                 Toast.makeText(MainActivity.this, "PROCESS DELAY RECORD ERROR!!!", Toast.LENGTH_SHORT).show();
             }
+
+            return true;
+        } else {
+            return false;
         }
     }
 
@@ -706,16 +740,20 @@ public class MainActivity extends AppCompatActivity implements
      * Икремент таймера записи образца
      */
     @RequiresApi(api = Build.VERSION_CODES.O)
-    private void incrementRecordTime(){
+    private boolean incrementRecordTime(){
         if(recordStatus == RecordStatus.PROCESS){
             try {
-                String temp = String.valueOf(etRecordCurrentTime.getText());
+                long time = (System.currentTimeMillis() - startTimeRecord);
+                int second = (int) (time / 1000);
+                int millisecond = (int) (time % 1000);
+                String temp = second + "." + millisecond;
+
                 double currentTimeValue = Double.parseDouble(temp);
                 if(currentTimeValue <= recordEndTime){
-                    currentTimeValue++;
                     etRecordDelay.setText(currentTimeValue + "");
                 } else {
                     recordStatus = RecordStatus.END;
+                    etRecordDelay.setText(recordEndTime + "");
 
                     boolean statusSave = saveWave();
                     if(statusSave){
@@ -727,6 +765,10 @@ public class MainActivity extends AppCompatActivity implements
             } catch (NumberFormatException e) {
                 Toast.makeText(MainActivity.this, "PROCESS TIME RECORD ERROR!!!", Toast.LENGTH_SHORT).show();
             }
+
+            return true;
+        } else {
+            return false;
         }
     }
 
@@ -744,13 +786,12 @@ public class MainActivity extends AppCompatActivity implements
         try {
             WavSaver.save(wave, recordEndTime, pathParent, pathChild);
 
-            recordStatus = RecordStatus.END;
             return true;
         } catch (IOException | WavFileException e) {
-            recordStatus = RecordStatus.END;
             return false;
         }
     }
+    ///////////////////////////////////////////////////////////////////////////////
 
     /**
      * Распарсить bluetooth сообщение для дальнейшей обработки
@@ -807,6 +848,7 @@ public class MainActivity extends AppCompatActivity implements
         handler = new Handler();
         final MovementMethod movementMethod = new ScrollingMovementMethod();
         handler.post(timer = new Runnable() {
+            @RequiresApi(api = Build.VERSION_CODES.O)
             @Override
             public void run() {
                 etConsole.setText(lastSensorValues);
@@ -824,6 +866,10 @@ public class MainActivity extends AppCompatActivity implements
                             series.appendData(new DataPoint(time, value), true, maxDataPointsOnGraph * 100);
                         }
 
+                        if(recordStatus == RecordStatus.PREPARE || recordStatus == RecordStatus.PROCESS){
+                            record();
+                        }
+
                         xLastValue = time;
                     } else if(dataSensor.containsKey("STATUS")){
                         String statusValue = dataSensor.get("STATUS");
@@ -835,9 +881,15 @@ public class MainActivity extends AppCompatActivity implements
                             //Код статуса OFF
                             if(statusValue.equals("OFF")){
                                 indicator.setImageResource(R.drawable.indicatoroff);
+
+                                if(recordStatus == RecordStatus.PREPARE){
+                                    startTimeDelay = System.currentTimeMillis();
+                                } else if(recordStatus == RecordStatus.PROCESS){
+                                    startTimeRecord =  System.currentTimeMillis();
+                                }
+                            }
                         }
                     }
-                }
 
                 handler.post(this);
             }

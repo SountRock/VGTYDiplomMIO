@@ -152,6 +152,15 @@
             android:lines="4"
             android:scrollbars="vertical" />
 
+        <Button
+            android:id="@+id/record_btn"
+            android:layout_below="@+id/timer_record_label"
+            android:layout_toRightOf="@+id/et_timer_record"
+            android:textSize="10sp"
+            android:textColor="@color/color_red"
+            android:layout_width="70sp"
+            android:layout_height="50sp"
+            />
         <!-- Record Timer ######################### -->
 
         <Button
