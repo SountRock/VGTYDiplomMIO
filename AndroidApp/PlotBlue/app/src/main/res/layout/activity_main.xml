@@ -92,7 +92,7 @@
         <!-- Record Timer ######################### -->
         <TextView
             android:id="@+id/delay_record_label"
-            android:layout_width="100sp"
+            android:layout_width="70dp"
             android:layout_height="40sp"
             android:layout_below="@+id/et_console"
             android:text="@string/delay"
@@ -101,7 +101,7 @@
             />
         <EditText
             android:id="@+id/et_delay_record"
-            android:layout_width="100dp"
+            android:layout_width="70dp"
             android:layout_height="50dp"
             android:layout_below="@+id/delay_record_label"
             android:layout_marginTop="8dp"
@@ -112,7 +112,7 @@
 
         <TextView
             android:id="@+id/end_record_label"
-            android:layout_width="100sp"
+            android:layout_width="70dp"
             android:layout_height="40sp"
             android:layout_below="@+id/et_console"
             android:layout_toRightOf="@+id/et_delay_record"
@@ -121,7 +121,7 @@
             />
         <EditText
             android:id="@+id/et_end_record"
-            android:layout_width="100dp"
+            android:layout_width="70dp"
             android:layout_height="50dp"
             android:layout_marginTop="8dp"
             android:editable="true"
@@ -133,7 +133,7 @@
 
         <TextView
             android:id="@+id/timer_record_label"
-            android:layout_width="100sp"
+            android:layout_width="70dp"
             android:layout_height="40sp"
             android:layout_below="@+id/et_console"
             android:layout_toRightOf="@+id/et_end_record"
@@ -142,7 +142,7 @@
             />
         <EditText
             android:id="@+id/et_timer_record"
-            android:layout_width="100dp"
+            android:layout_width="70dp"
             android:layout_height="50dp"
             android:layout_marginTop="8dp"
             android:editable="false"

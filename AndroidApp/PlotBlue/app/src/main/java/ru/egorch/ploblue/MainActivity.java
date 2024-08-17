@@ -1,6 +1,7 @@
 package ru.egorch.ploblue;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -15,6 +16,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.method.MovementMethod;
@@ -50,6 +52,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 
+import ru.egorch.ploblue.wav.WavFile;
 import ru.egorch.ploblue.wav.WavFileException;
 
 public class MainActivity extends AppCompatActivity implements
@@ -196,11 +199,14 @@ public class MainActivity extends AppCompatActivity implements
         etRecordCurrentTime = findViewById(R.id.et_timer_record);
         recordButton = findViewById(R.id.record_btn);
         recordButton.setText("ON");
+        recordButton.setTextColor(getApplication().getResources().getColor(R.color.color_green));
+        recordButton.setOnClickListener(this);
     }
 
     /**
      * Возобновить работу приложения
      */
+    @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     protected void onPause() {
         super.onPause();
@@ -220,6 +226,7 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -263,8 +270,19 @@ public class MainActivity extends AppCompatActivity implements
         } else if (v.equals(btnSerialOff)) {
             setSerialStatusOnDevice(false);
         } else if (v.equals(recordButton)) {
-            Toast.makeText(MainActivity.this, "__PREPARE PHASE__", Toast.LENGTH_SHORT).show();
-            prepareFromRecordingToWav();
+            if(recordStatus != RecordStatus.END){
+                offRecordWav();
+
+                boolean statusSave = saveWave();
+                if(statusSave){
+                    Toast.makeText(MainActivity.this, "SUCCESSFULLY SAVE!", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(MainActivity.this, "FAILED SAVE!", Toast.LENGTH_SHORT).show();
+                }
+            } else {
+                Toast.makeText(MainActivity.this, "__PREPARE PHASE__", Toast.LENGTH_SHORT).show();
+                prepareFromRecordingToWav();
+            }
         }
     }
 
@@ -275,6 +293,8 @@ public class MainActivity extends AppCompatActivity implements
      * @param position
      * @param id
      */
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    @SuppressLint("NewApi")
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         if (parent.equals(listBtDevices)) {
@@ -675,17 +695,12 @@ public class MainActivity extends AppCompatActivity implements
      * Включить запись
      */
     @RequiresApi(api = Build.VERSION_CODES.O)
-    private void record(){
-        boolean isDelay = decrementRecordDelay();
-        if(isDelay){
-            Toast.makeText(MainActivity.this, "__DELAY PHASE__", Toast.LENGTH_SHORT).show();
-        } else {
-            boolean isRecord = incrementRecordTime();
-            if(isRecord) {
-                Toast.makeText(MainActivity.this, "__RECORD PHASE__", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(MainActivity.this, "__RECORD END__", Toast.LENGTH_SHORT).show();
-            }
+    private synchronized void recordWav(double val){
+        if(recordStatus == RecordStatus.PREPARE){
+            decrementRecordDelay();
+        } else if(recordStatus == RecordStatus.PROCESS) {
+            wave.add(val);
+            incrementRecordTime();
         }
     }
 
@@ -698,12 +713,18 @@ public class MainActivity extends AppCompatActivity implements
             recordEndTime = Double.parseDouble(temp);
             etRecordCurrentTime.setText("0.0");
 
+            etRecordDelay.setEnabled(false);
             temp = String.valueOf(etRecordDelay.getText());
             recordDelay = Double.parseDouble(temp);
-            etRecordDelay.setEnabled(false);
             startTimeDelay = System.currentTimeMillis();
 
+            etRecordEndTime.setEnabled(false);
+
             recordStatus = RecordStatus.PREPARE;
+            recordButton.setText("OFF");
+            recordButton.setTextColor(getApplication().getResources().getColor(R.color.color_red));
+
+            Toast.makeText(MainActivity.this, "__DELAY PHASE__", Toast.LENGTH_SHORT).show();
         } catch (NumberFormatException e){
             Toast.makeText(MainActivity.this, "PARAMETERS RECORD ERROR!!!", Toast.LENGTH_SHORT).show();
         }
@@ -712,27 +733,27 @@ public class MainActivity extends AppCompatActivity implements
     /**
      * Декремент таймера задержки записи образца
      */
-    private boolean decrementRecordDelay(){
+    private void decrementRecordDelay(){
         if(recordStatus == RecordStatus.PREPARE){
             try {
                 long time = (System.currentTimeMillis() - startTimeDelay);
                 int second = (int) (time / 1000);
                 int millisecond = (int) (time % 1000);
-                String temp = second + "." + millisecond;
+                String temp = second + "." + (millisecond + "").substring(0,1);
 
                 double currentDelayTimeValue = recordDelay - Double.parseDouble(temp);
                 if(currentDelayTimeValue >= 0.0){
                     etRecordDelay.setText(currentDelayTimeValue + "");
                 } else {
+                    etRecordDelay.setText("0.0");
+
+                    startTimeRecord = System.currentTimeMillis();
                     recordStatus = RecordStatus.PROCESS;
+                    Toast.makeText(MainActivity.this, "__RECORD PHASE__", Toast.LENGTH_SHORT).show();
                 }
             } catch (NumberFormatException e) {
                 Toast.makeText(MainActivity.this, "PROCESS DELAY RECORD ERROR!!!", Toast.LENGTH_SHORT).show();
             }
-
-            return true;
-        } else {
-            return false;
         }
     }
 
@@ -740,54 +761,63 @@ public class MainActivity extends AppCompatActivity implements
      * Икремент таймера записи образца
      */
     @RequiresApi(api = Build.VERSION_CODES.O)
-    private boolean incrementRecordTime(){
+    private void incrementRecordTime(){
         if(recordStatus == RecordStatus.PROCESS){
             try {
                 long time = (System.currentTimeMillis() - startTimeRecord);
                 int second = (int) (time / 1000);
                 int millisecond = (int) (time % 1000);
-                String temp = second + "." + millisecond;
+                String temp = second + "." + (millisecond + "").substring(0,1);
 
                 double currentTimeValue = Double.parseDouble(temp);
                 if(currentTimeValue <= recordEndTime){
-                    etRecordDelay.setText(currentTimeValue + "");
+                    etRecordCurrentTime.setText(currentTimeValue + "");
                 } else {
-                    recordStatus = RecordStatus.END;
-                    etRecordDelay.setText(recordEndTime + "");
+                    offRecordWav();
 
                     boolean statusSave = saveWave();
                     if(statusSave){
                         Toast.makeText(MainActivity.this, "SUCCESSFULLY SAVE!", Toast.LENGTH_SHORT).show();
-                    } else {
-                        Toast.makeText(MainActivity.this, "FAILED SAVE!", Toast.LENGTH_SHORT).show();
                     }
+
+                    wave.clear();
+                    Toast.makeText(MainActivity.this, "__RECORD END__", Toast.LENGTH_SHORT).show();
                 }
             } catch (NumberFormatException e) {
                 Toast.makeText(MainActivity.this, "PROCESS TIME RECORD ERROR!!!", Toast.LENGTH_SHORT).show();
             }
-
-            return true;
-        } else {
-            return false;
         }
+    }
+
+    /**
+     * Отключить запсись Wav
+     */
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    private void offRecordWav(){
+        recordStatus = RecordStatus.END;
+        etRecordCurrentTime.setText(recordEndTime + "");
+
+        etRecordDelay.setEnabled(true);
+        etRecordEndTime.setEnabled(true);
+        recordButton.setText("ON");
+        recordButton.setTextColor(getApplication().getResources().getColor(R.color.color_green));
     }
 
 
     /**
      * Сохранить образец
      */
-    @RequiresApi(api = Build.VERSION_CODES.O)
     private boolean saveWave(){
-        String pathParent = Environment.getExternalStorageDirectory() + "/MRecord/samples/";
-        String pathChild = (etRecordName.getText() + LocalDateTime.now().toString() + ".wav")
-                .replaceAll(":", "T")
-                .replaceAll("\\.", "T");
+        String pathParent = Environment.getExternalStorageDirectory() + "/MRecord/samples";
+        String pathChild = etRecordName.getText() + ".wav";
 
         try {
-            WavSaver.save(wave, recordEndTime, pathParent, pathChild);
+            WavFile isSave = WavSaver.save(wave, recordEndTime, pathParent, pathChild, this);
 
-            return true;
+            return isSave != null ? true : false;
         } catch (IOException | WavFileException e) {
+
+            Toast.makeText(MainActivity.this, e.getLocalizedMessage() + " | " + e.getMessage(), Toast.LENGTH_SHORT).show();
             return false;
         }
     }
@@ -843,6 +873,7 @@ public class MainActivity extends AppCompatActivity implements
     /**
      * Запуск потока таймера для обновления данных на GUI
      */
+    @RequiresApi(api = Build.VERSION_CODES.O)
     private void startTimer() {
         cancelTimer();
         handler = new Handler();
@@ -867,7 +898,7 @@ public class MainActivity extends AppCompatActivity implements
                         }
 
                         if(recordStatus == RecordStatus.PREPARE || recordStatus == RecordStatus.PROCESS){
-                            record();
+                            recordWav(value);
                         }
 
                         xLastValue = time;
@@ -899,10 +930,12 @@ public class MainActivity extends AppCompatActivity implements
     /**
      * Остановка таймера
      */
+    @RequiresApi(api = Build.VERSION_CODES.O)
     private void cancelTimer() {
         if (handler != null) {
             handler.removeCallbacks(timer);
         }
+        offRecordWav();
     }
 
 }
