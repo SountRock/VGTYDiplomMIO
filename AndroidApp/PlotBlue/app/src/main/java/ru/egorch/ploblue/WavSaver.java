@@ -12,7 +12,7 @@ import ru.egorch.ploblue.wav.WavFileException;
 public class WavSaver {
 
     public static WavFile save(List<Double> wave, double duration, String pathParent, String pathChild, MainActivity main) throws IOException, WavFileException {
-        int sampleRate = 1;    // Samples per second 44100
+        int sampleRate = 192000;    // Samples per second 44100
 
         long numFrames = (long) (duration * sampleRate);
 
@@ -48,11 +48,10 @@ public class WavSaver {
 
             // Fill the buffer, one tone per channel
             int phase = wave.size() - toWrite;
-            for (int s = phase; s < toWrite ; s++) {
-                buffer[0][s] = wave.get(s) / 1000;
-                buffer[1][s] = wave.get(s) / 1000;
+            for (int s = phase; s < toWrite ; s++, frameCounter++) {
+                buffer[0][s] = wave.get(s) / 1000.0;
+                buffer[1][s] = wave.get(s) / 1000.0;
             }
-            frameCounter++;
 
             // Write the buffer
             wavFile.writeFrames(buffer, toWrite);
