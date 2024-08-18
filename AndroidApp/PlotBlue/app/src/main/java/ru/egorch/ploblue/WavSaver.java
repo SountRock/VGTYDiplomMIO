@@ -47,8 +47,7 @@ public class WavSaver {
             int toWrite = (remaining > wave.size()) ? wave.size() : (int) remaining;
 
             // Fill the buffer, one tone per channel
-            int phase = wave.size() - toWrite;
-            for (int s = phase; s < toWrite ; s++, frameCounter++) {
+            for (int s = 0; s < toWrite ; s++, frameCounter++) {
                 buffer[0][s] = wave.get(s) / 1000.0;
                 buffer[1][s] = wave.get(s) / 1000.0;
             }
