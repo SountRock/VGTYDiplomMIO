@@ -12,7 +12,7 @@ import ru.egorch.ploblue.wav.WavFileException;
 public class WavSaver {
 
     public static WavFile save(List<Double> wave, double duration, String pathParent, String pathChild, MainActivity main) throws IOException, WavFileException {
-        int sampleRate = 440;    // Samples per second 44100
+        int sampleRate = 1;    // Samples per second 44100
 
         long numFrames = (long) (duration * sampleRate);
 
@@ -34,7 +34,7 @@ public class WavSaver {
         Toast.makeText(main, "FILE CREATED", Toast.LENGTH_SHORT).show();
         //////////////////////////////////////////////
 
-        WavFile wavFile = WavFile.newWavFile(newSample, 2, numFrames, 16, sampleRate);
+        WavFile wavFile = WavFile.newWavFile(newSample, 2, numFrames, 32, sampleRate);
 
         double[][] buffer = new double[2][wave.size()];
 
