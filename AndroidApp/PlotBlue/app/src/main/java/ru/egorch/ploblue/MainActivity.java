@@ -838,7 +838,7 @@ public class MainActivity extends AppCompatActivity implements
             return isSave != null ? true : false;
         } catch (IOException | WavFileException e) {
 
-            Toast.makeText(MainActivity.this, e.getLocalizedMessage() + " | " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(MainActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
             return false;
         }
     }
@@ -903,18 +903,18 @@ public class MainActivity extends AppCompatActivity implements
             @RequiresApi(api = Build.VERSION_CODES.O)
             @Override
             public void run() {
-                etConsole.setText(lastSensorValues);
-                etConsole.setMovementMethod(movementMethod);
-
                 //TODO Сделать оповещение о разрыве связи
                 //Toast.makeText(MainActivity.this, "CONNECTION LOST!", Toast.LENGTH_SHORT).show();
 
                 HashMap<String, String> dataSensor = parseData(lastSensorValues);
                 if (dataSensor != null) {
                     if (dataSensor.containsKey("VAL") && dataSensor.containsKey("TIME")) {
+                        etConsole.setText(lastSensorValues);
+                        etConsole.setMovementMethod(movementMethod);
+
                         float value = Float.parseFloat(dataSensor.get("VAL").toString());
                         float time = Float.parseFloat(dataSensor.get("TIME").toString());
-                        if(time > xLastValue){
+                        if(time > xLastValue + 0.2){
                             series.appendData(new DataPoint(time, value), true, maxDataPointsOnGraph * 100);
                         }
 
