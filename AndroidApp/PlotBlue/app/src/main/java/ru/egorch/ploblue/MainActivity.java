@@ -11,12 +11,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
-import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.Editable;
@@ -43,17 +43,18 @@ import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
 
 import java.io.BufferedInputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 
+import ru.egorch.ploblue.filters.HPFilter;
+import ru.egorch.ploblue.filters.LPFilter;
+import ru.egorch.ploblue.filters.OptimalRunningArithmeticFilter;
 import ru.egorch.ploblue.wav.WavFile;
 import ru.egorch.ploblue.wav.WavFileException;
 
@@ -108,7 +109,6 @@ public class MainActivity extends AppCompatActivity implements
 
 
     //Запись образца/////
-    //private FileWriter saverWave;
     private List<Double> wave;
     private RecordStatus recordStatus = RecordStatus.END;
     private double recordEndTime = 0.0;
@@ -123,6 +123,23 @@ public class MainActivity extends AppCompatActivity implements
     private EditText etRecordCurrentTime;
     private EditText etDurationRecord;
     private Button recordButton;
+    private MediaPlayer startRecordPlayer;
+    private MediaPlayer endRecordPlayer;
+
+    //Изменение параметров фильрации/////
+    private Button LPFButton;
+    private EditText LPFEdit;
+    private Button HPFButton;
+    private EditText HPFEdit;
+    private Button SmFButton;
+    private EditText SmFEdit;
+    private Button enterParams;
+    private LPFilter lpFilter;
+    private HPFilter hpFilter;
+    private OptimalRunningArithmeticFilter smFilter;
+    private boolean isEnabledLPF = true;
+    private boolean isEnabledHPF = true;
+    private boolean isEnabledSmF = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -218,6 +235,45 @@ public class MainActivity extends AppCompatActivity implements
         recordButton.setText("ON");
         recordButton.setTextColor(getApplication().getResources().getColor(R.color.color_green));
         recordButton.setOnClickListener(this);
+
+        startRecordPlayer = MediaPlayer.create(this, R.raw.signal);
+        startRecordPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override
+            public void onCompletion(MediaPlayer mp) {
+                startRecordPlayer.stop();
+            }
+        });
+        endRecordPlayer = MediaPlayer.create(this, R.raw.signal_end);
+        endRecordPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override
+            public void onCompletion(MediaPlayer mp) {
+                endRecordPlayer.stop();
+            }
+        });
+
+        //FILTERS//////////////////////////////////////////////////////////////////////
+        LPFButton = findViewById(R.id.lowpass_filter_label);
+        LPFEdit = findViewById(R.id.et_lowpass_filter);
+        LPFEdit.setText("0.1");
+        LPFButton.setOnClickListener(this);
+
+        HPFButton = findViewById(R.id.hightpass_filter_label);
+        HPFEdit = findViewById(R.id.et_hightpass_filter);;
+        HPFEdit.setText("0.9");
+        HPFButton.setOnClickListener(this);
+
+        SmFButton = findViewById(R.id.smoothing_filter_label);
+        SmFEdit = findViewById(R.id.et_smoothing_filter);
+        SmFEdit.setText("10");
+        SmFButton.setOnClickListener(this);
+
+        enterParams = findViewById(R.id.push_filter_params);
+        enterParams.setOnClickListener(this);
+
+        lpFilter = new LPFilter(0.1F);
+        hpFilter = new HPFilter(0.9F);
+        smFilter = new OptimalRunningArithmeticFilter(10);
+        ///////////////////////////////////////////////////////////////////////////////
     }
 
     /**
@@ -283,9 +339,14 @@ public class MainActivity extends AppCompatActivity implements
 
             showFrameControls();
         } else if (v.equals(btnSerialOn)) {
+            Toast.makeText(MainActivity.this, "__START RECORD__", Toast.LENGTH_SHORT).show();
             setSerialStatusOnDevice(true);
         } else if (v.equals(btnSerialOff)) {
+            Toast.makeText(MainActivity.this, "__STOP RECORD__", Toast.LENGTH_SHORT).show();
             setSerialStatusOnDevice(false);
+        } else if (v.equals(enterParams)) {
+            Toast.makeText(MainActivity.this, "__PUSH NEW FILTER PARAMS__", Toast.LENGTH_SHORT).show();
+            getNSetNewFiltersParamsNStatus();
         } else if (v.equals(recordButton)) {
             if(recordStatus != RecordStatus.END){
                 offRecordWav();
@@ -299,6 +360,30 @@ public class MainActivity extends AppCompatActivity implements
             } else {
                 Toast.makeText(MainActivity.this, "__PREPARE PHASE__", Toast.LENGTH_SHORT).show();
                 prepareFromRecordingToWav();
+            }
+        } else if (v.equals(HPFButton)){
+            isEnabledHPF = !isEnabledHPF;
+
+            if(isEnabledHPF){
+                HPFButton.setTextColor(getApplication().getResources().getColor(R.color.color_green));
+            } else {
+                HPFButton.setTextColor(getApplication().getResources().getColor(R.color.color_red));
+            }
+        } else if (v.equals(LPFButton)){
+            isEnabledLPF = !isEnabledLPF;
+
+            if(isEnabledLPF){
+                LPFButton.setTextColor(getApplication().getResources().getColor(R.color.color_green));
+            } else {
+                LPFButton.setTextColor(getApplication().getResources().getColor(R.color.color_red));
+            }
+        } else if (v.equals(SmFButton)){
+            isEnabledSmF = !isEnabledSmF;
+
+            if(isEnabledSmF){
+                SmFButton.setTextColor(getApplication().getResources().getColor(R.color.color_green));
+            } else {
+                SmFButton.setTextColor(getApplication().getResources().getColor(R.color.color_red));
             }
         }
     }
@@ -697,16 +782,15 @@ public class MainActivity extends AppCompatActivity implements
         if (connectedThread != null && connectThread.isConnect()) {
             String command;
 
-            command = (status) ? "1" : "0";
+            command = (status) ? "+" : "-";
 
             //C учетом зажержки итераций устройства
             long start = System.currentTimeMillis();
-            while (System.currentTimeMillis() - start < DEVICE_DELAY * 2){
+            while (System.currentTimeMillis() - start < DEVICE_DELAY * 2) {
                 connectedThread.write(command);
             }
         }
     }
-
     ///////////////////////////////////////////////////////////////////////////////
     /**
      * Включить запись
@@ -766,11 +850,12 @@ public class MainActivity extends AppCompatActivity implements
                 if(currentDelayTimeValue >= 0.0){
                     etRecordDelay.setText(String.format("%.2f", currentDelayTimeValue));
                 } else {
-                    etRecordDelay.setText("0.0");
+                    etRecordDelay.setText(recordDelay+"");
 
                     startTimeRecord = System.currentTimeMillis();
                     recordStatus = RecordStatus.PROCESS;
                     Toast.makeText(MainActivity.this, "__RECORD PHASE__", Toast.LENGTH_SHORT).show();
+                    startRecordPlayer.start();
                 }
             } catch (NumberFormatException e) {
                 Toast.makeText(MainActivity.this, "PROCESS DELAY RECORD ERROR!!!", Toast.LENGTH_SHORT).show();
@@ -817,9 +902,11 @@ public class MainActivity extends AppCompatActivity implements
     private void offRecordWav(){
         recordStatus = RecordStatus.END;
         etRecordCurrentTime.setText(recordEndTime + "");
+        endRecordPlayer.stop();
 
         etRecordDelay.setEnabled(true);
         etRecordEndTime.setEnabled(true);
+        etDurationRecord.setEnabled(true);
         recordButton.setText("ON");
         recordButton.setTextColor(getApplication().getResources().getColor(R.color.color_green));
     }
@@ -830,11 +917,12 @@ public class MainActivity extends AppCompatActivity implements
      */
     private boolean saveWave(){
         String pathParent = Environment.getExternalStorageDirectory() + "/MRecord/samples";
-        String pathChild = etRecordName.getText() + ".wav";
+        String pathChild = etRecordName.getText() + "";
 
         try {
             WavFile isSave = WavSaver.save(wave, durationRecord, pathParent, pathChild, this);
 
+            wave.clear();
             return isSave != null ? true : false;
         } catch (IOException | WavFileException e) {
 
@@ -890,6 +978,56 @@ public class MainActivity extends AppCompatActivity implements
         return null;
     }
 
+    /**
+     * Фильтрация сигнала
+     * @param EMGVal
+     * @return
+     */
+    private float filterate(float EMGVal){
+        double EMGValc = hpFilter.DCRemover(EMGVal);  // Highpass
+        EMGVal = lpFilter.LPF((float) Math.abs(EMGValc), EMGVal); // Lowpass
+        EMGVal = smFilter.iterationFilter(EMGVal);
+
+        return EMGVal;
+    }
+
+    /**
+     * Установить новые параметры фильтрации
+     */
+    private void setNewFiltersParams(float Khf, float Klf, int num_read){
+        hpFilter.setKhf(Khf);
+        lpFilter.setKlf(Klf);
+        smFilter.setNum_read(num_read);
+    }
+
+    /**
+     * Установить новые статусы фильтрров
+     */
+    private void setNewFiltersStatus(boolean isHPFEnable, boolean isLPFEnable, boolean isSmFEnable){
+        hpFilter.setStatus(isHPFEnable);
+        lpFilter.setStatus(isLPFEnable);
+        smFilter.setStatus(isSmFEnable);
+    }
+
+    /**
+     * Получить и установить параметры фильтров с полей ввода
+     */
+    private void getNSetNewFiltersParamsNStatus(){
+        try {
+            float newKhf = Float.parseFloat(HPFEdit.getText() + "");
+            float newKlf = Float.parseFloat(LPFEdit.getText() + "");
+            int newNum_read = Integer.parseInt(SmFEdit.getText() + "");
+
+            setNewFiltersParams(newKhf, newKlf, newNum_read);
+
+            setNewFiltersStatus(isEnabledHPF, isEnabledLPF, isEnabledSmF);
+
+            Toast.makeText(MainActivity.this, "__NEW FILTER PARAMS ACCEPTED__", Toast.LENGTH_SHORT).show();
+        } catch (Exception e){
+            Toast.makeText(MainActivity.this, "__NEW FILTER PARAMS NOT ACCEPTED!__" + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
 
     /**
      * Запуск потока таймера для обновления данных на GUI
@@ -905,14 +1043,16 @@ public class MainActivity extends AppCompatActivity implements
             public void run() {
                 //TODO Сделать оповещение о разрыве связи
                 //Toast.makeText(MainActivity.this, "CONNECTION LOST!", Toast.LENGTH_SHORT).show();
+                etConsole.setText(lastSensorValues);
+                etConsole.setMovementMethod(movementMethod);
 
                 HashMap<String, String> dataSensor = parseData(lastSensorValues);
                 if (dataSensor != null) {
                     if (dataSensor.containsKey("VAL") && dataSensor.containsKey("TIME")) {
-                        etConsole.setText(lastSensorValues);
-                        etConsole.setMovementMethod(movementMethod);
-
                         float value = Float.parseFloat(dataSensor.get("VAL").toString());
+                        //Фитрация сигнала
+                        value = filterate(value);
+
                         float time = Float.parseFloat(dataSensor.get("TIME").toString());
                         if(time > xLastValue + 0.2){
                             series.appendData(new DataPoint(time, value), true, maxDataPointsOnGraph * 100);
@@ -941,7 +1081,7 @@ public class MainActivity extends AppCompatActivity implements
                                 }
                             }
                         }
-                    }
+                }
 
                 handler.post(this);
             }

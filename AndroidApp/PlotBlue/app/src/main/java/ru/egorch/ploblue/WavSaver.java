@@ -17,6 +17,8 @@ public class WavSaver {
         long numFrames = (long) (duration * sampleRate);
 
         //////////////////////////////////////////////
+        double heightKoeff = Math.pow(10, Math.round(findMaxDepth(wave) / 2));
+        //////////////////////////////////////////////
         File newSample = new File(pathParent);
         boolean isCreate = newSample.mkdirs();
         if(!isCreate && !newSample.exists()) {
@@ -25,13 +27,14 @@ public class WavSaver {
             Toast.makeText(main, "DIRS CREATED", Toast.LENGTH_SHORT).show();
         }
 
-        newSample = new File(pathParent, pathChild);
+        String fileName = pathChild + "(" + heightKoeff + ")" + ".wav";
+        newSample = new File(pathParent, fileName);
         isCreate = newSample.createNewFile();
         if(!isCreate){
             Toast.makeText(main, "FAIL FILE CREATED!", Toast.LENGTH_SHORT).show();
             return null;
         }
-        Toast.makeText(main, "FILE CREATED", Toast.LENGTH_SHORT).show();
+        Toast.makeText(main, "FILE CREATED " + fileName, Toast.LENGTH_SHORT).show();
         //////////////////////////////////////////////
 
         WavFile wavFile = WavFile.newWavFile(newSample, 2, numFrames, 32, sampleRate);
@@ -48,8 +51,8 @@ public class WavSaver {
 
             // Fill the buffer, one tone per channel
             for (int s = 0; s < toWrite ; s++, frameCounter++) {
-                buffer[0][s] = wave.get(s) / 1000.0;
-                buffer[1][s] = wave.get(s) / 1000.0;
+                buffer[0][s] = wave.get(s) / heightKoeff;
+                buffer[1][s] = wave.get(s) / heightKoeff;
             }
 
             // Write the buffer
@@ -58,5 +61,19 @@ public class WavSaver {
 
         wavFile.close();
         return wavFile;
+    }
+
+    private static int findMaxDepth(List<Double> wave){
+        try {
+            double max =  wave.get(0);
+            for (Double w : wave) {
+                max = w > max ? w : max;
+            }
+            String numStr = Double.toString(Math.round(max));
+
+            return numStr.length();
+        } catch (IndexOutOfBoundsException e){
+            return 3;
+        }
     }
 }

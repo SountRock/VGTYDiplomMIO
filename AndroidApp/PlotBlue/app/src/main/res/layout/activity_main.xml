@@ -74,14 +74,14 @@
             android:id="@+id/btn_disconnect"
             android:text="@string/disconnect"
             android:layout_centerHorizontal="true"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="5dp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
 
         <EditText
             android:id="@+id/et_console"
             android:layout_width="186dp"
-            android:layout_height="60dp"
+            android:layout_height="50dp"
             android:layout_below="@+id/btn_disconnect"
             android:layout_marginTop="8dp"
             android:editable="false"
@@ -102,7 +102,7 @@
         <EditText
             android:id="@+id/et_delay_record"
             android:layout_width="50dp"
-            android:layout_height="50dp"
+            android:layout_height="40dp"
             android:layout_below="@+id/delay_record_label"
             android:layout_marginTop="8dp"
             android:editable="true"
@@ -122,7 +122,7 @@
         <EditText
             android:id="@+id/et_end_record"
             android:layout_width="50dp"
-            android:layout_height="50dp"
+            android:layout_height="40dp"
             android:layout_marginTop="8dp"
             android:editable="true"
             android:gravity="bottom"
@@ -143,7 +143,7 @@
         <EditText
             android:id="@+id/et_timer_record"
             android:layout_width="50dp"
-            android:layout_height="50dp"
+            android:layout_height="40dp"
             android:layout_marginTop="8dp"
             android:editable="false"
             android:gravity="bottom"
@@ -164,7 +164,7 @@
         <EditText
             android:id="@+id/et_duration_record"
             android:layout_width="50dp"
-            android:layout_height="50dp"
+            android:layout_height="40dp"
             android:layout_marginTop="8dp"
             android:editable="true"
             android:gravity="bottom"
@@ -180,10 +180,99 @@
             android:textSize="10sp"
             android:textColor="@color/color_red"
             android:layout_width="70sp"
-            android:layout_height="50sp"
+            android:layout_height="40sp"
+            />
+
+        <EditText
+            android:id="@+id/et_record_name"
+            android:layout_width="match_parent"
+            android:layout_height="40sp"
+            android:layout_below="@+id/et_delay_record"
+            android:layout_alignParentLeft="true"
+            android:editable="true"
+            android:text="@string/name_record"
+            android:textSize="15sp"
             />
         <!-- Record Timer ######################### -->
 
+        <!-- Filters Params ######################### -->
+        <Button
+            android:id="@+id/lowpass_filter_label"
+            android:layout_width="60dp"
+            android:layout_height="40sp"
+            android:layout_below="@+id/et_record_name"
+            android:text="@string/lowpass_filter"
+            android:textSize="10sp"
+            android:layout_alignParentLeft="true"
+            android:textColor="@color/color_green"
+            />
+        <EditText
+            android:id="@+id/et_lowpass_filter"
+            android:layout_width="50dp"
+            android:layout_height="40dp"
+            android:layout_below="@+id/et_record_name"
+            android:layout_toRightOf="@+id/lowpass_filter_label"
+            android:layout_marginTop="8dp"
+            android:editable="true"
+            android:gravity="bottom"
+            android:lines="4"
+            android:scrollbars="vertical" />
+
+        <Button
+            android:id="@+id/hightpass_filter_label"
+            android:layout_width="60dp"
+            android:layout_height="40sp"
+            android:layout_below="@+id/et_record_name"
+            android:layout_toRightOf="@+id/et_lowpass_filter"
+            android:text="@string/hightpass_filter"
+            android:textSize="10sp"
+            android:textColor="@color/color_green"
+            />
+        <EditText
+            android:id="@+id/et_hightpass_filter"
+            android:layout_width="50dp"
+            android:layout_height="40dp"
+            android:layout_below="@+id/et_record_name"
+            android:layout_toRightOf="@+id/hightpass_filter_label"
+            android:layout_marginTop="8dp"
+            android:editable="true"
+            android:gravity="bottom"
+            android:lines="4"
+            android:scrollbars="vertical" />
+
+        <Button
+            android:id="@+id/smoothing_filter_label"
+            android:layout_width="60dp"
+            android:layout_height="40sp"
+            android:layout_below="@+id/et_record_name"
+            android:layout_toRightOf="@+id/et_hightpass_filter"
+            android:text="@string/smoothing_filter"
+            android:textSize="10sp"
+            android:textColor="@color/color_green"
+            />
+        <EditText
+            android:id="@+id/et_smoothing_filter"
+            android:layout_width="50dp"
+            android:layout_height="40dp"
+            android:layout_below="@+id/et_record_name"
+            android:layout_toRightOf="@+id/smoothing_filter_label"
+            android:layout_marginTop="8dp"
+            android:editable="true"
+            android:gravity="bottom"
+            android:lines="4"
+            android:scrollbars="vertical" />
+
+        <Button
+            android:id="@+id/push_filter_params"
+            android:layout_below="@+id/et_lowpass_filter"
+            android:layout_toRightOf="@+id/y_label"
+            android:textSize="9sp"
+            android:textColor="@color/color_black"
+            android:layout_width="70sp"
+            android:layout_height="40sp"
+            android:text="@string/push_filter_params"
+            />
+        <!-- Filters Params ######################### -->
         <Button
             android:id="@+id/serial_on"
             android:layout_below="@+id/btn_disconnect"
@@ -219,22 +308,11 @@
         <TextView
             android:id="@+id/y_label"
             android:layout_width="100sp"
-            android:layout_height="40sp"
-            android:layout_below="@+id/et_delay_record"
+            android:layout_height="30sp"
+            android:layout_below="@+id/et_lowpass_filter"
             android:text="@string/y_label"
             android:textSize="15sp"
             android:layout_alignParentLeft="true"
-            />
-
-        <EditText
-            android:id="@+id/et_record_name"
-            android:layout_width="match_parent"
-            android:layout_height="40sp"
-            android:layout_below="@+id/et_delay_record"
-            android:layout_toRightOf="@+id/y_label"
-            android:editable="true"
-            android:text="@string/name_record"
-            android:textSize="15sp"
             />
 
         <TextView
