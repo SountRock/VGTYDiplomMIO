@@ -11,9 +11,7 @@ import ru.egorch.ploblue.wav.WavFileException;
 
 public class WavSaver {
 
-    public static WavFile save(List<Double> wave, double duration, String pathParent, String pathChild, MainActivity main) throws IOException, WavFileException {
-        int sampleRate = 192000;    // Samples per second 44100
-
+    public static WavFile save(List<Double> wave, double duration, int sampleRate, String pathParent, String pathChild, MainActivity main) throws IOException, WavFileException {
         long numFrames = (long) (duration * sampleRate);
 
         //////////////////////////////////////////////

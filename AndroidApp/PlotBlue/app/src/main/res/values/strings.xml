@@ -15,9 +15,10 @@
 
     <string name="delay">Delay</string>
     <string name="end_record">Record End Time</string>
-    <string name="timer_record">C. Time Value</string>
+    <string name="timer_record">Timer</string>
     <string name="name_record">RecordOne</string>
     <string name="duration_record">Durat.</string>
+    <string name="hz_label">Hz</string>
 
     <string name="lowpass_filter">LPF:</string>
     <string name="hightpass_filter">HPF:</string>

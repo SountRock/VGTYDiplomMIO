@@ -76,7 +76,6 @@ public class MainActivity extends AppCompatActivity implements
 
     private RelativeLayout frameGraphControls;
     private Button btnDisconnect;
-    private EditText etConsole;
     private ImageView indicator;
 
     private Switch switchEnableBt;
@@ -116,6 +115,7 @@ public class MainActivity extends AppCompatActivity implements
     private long startTimeDelay = 0;
     private long startTimeRecord = 0;
     private double durationRecord = 0.0;
+    private final int HzRecordSave = 192000;
     ///////
     private EditText etRecordName;
     private EditText etRecordDelay;
@@ -125,6 +125,7 @@ public class MainActivity extends AppCompatActivity implements
     private Button recordButton;
     private MediaPlayer startRecordPlayer;
     private MediaPlayer endRecordPlayer;
+    private EditText etHzRecordSave;
 
     //Изменение параметров фильрации/////
     private Button LPFButton;
@@ -156,7 +157,6 @@ public class MainActivity extends AppCompatActivity implements
 
         frameGraphControls = findViewById(R.id.frameMessage);
         btnDisconnect    = findViewById(R.id.btn_disconnect);
-        etConsole        = findViewById(R.id.et_console);
 
         //ИНИЦИАЛИЗАЦИЯ ГРАФИКА
         gvGraph          = findViewById(R.id.gv_graph);
@@ -216,7 +216,9 @@ public class MainActivity extends AppCompatActivity implements
         wave = new ArrayList<>();
         etRecordName = findViewById(R.id.et_record_name);
         etRecordDelay = findViewById(R.id.et_delay_record);
+        etRecordDelay.setText("60");
         etRecordEndTime = findViewById(R.id.et_end_record);
+        etRecordEndTime.setText("10");
         etRecordEndTime.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
@@ -231,16 +233,22 @@ public class MainActivity extends AppCompatActivity implements
         });
         etRecordCurrentTime = findViewById(R.id.et_timer_record);
         etDurationRecord = findViewById(R.id.et_duration_record);
+        etDurationRecord.setText("10");
         recordButton = findViewById(R.id.record_btn);
         recordButton.setText("ON");
         recordButton.setTextColor(getApplication().getResources().getColor(R.color.color_green));
         recordButton.setOnClickListener(this);
+        etHzRecordSave = findViewById(R.id.et_format_hz);
+        etHzRecordSave.setText("192000");
 
         startRecordPlayer = MediaPlayer.create(this, R.raw.signal);
         startRecordPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
             @Override
             public void onCompletion(MediaPlayer mp) {
                 startRecordPlayer.stop();
+                try {
+                    startRecordPlayer.prepare();
+                } catch (IOException e) {}
             }
         });
         endRecordPlayer = MediaPlayer.create(this, R.raw.signal_end);
@@ -248,6 +256,9 @@ public class MainActivity extends AppCompatActivity implements
             @Override
             public void onCompletion(MediaPlayer mp) {
                 endRecordPlayer.stop();
+                try {
+                    endRecordPlayer.prepare();
+                } catch (IOException e) {}
             }
         });
 
@@ -855,6 +866,7 @@ public class MainActivity extends AppCompatActivity implements
                     startTimeRecord = System.currentTimeMillis();
                     recordStatus = RecordStatus.PROCESS;
                     Toast.makeText(MainActivity.this, "__RECORD PHASE__", Toast.LENGTH_SHORT).show();
+
                     startRecordPlayer.start();
                 }
             } catch (NumberFormatException e) {
@@ -880,6 +892,7 @@ public class MainActivity extends AppCompatActivity implements
                     etRecordCurrentTime.setText(currentTimeValue + "");
                 } else {
                     offRecordWav();
+                    endRecordPlayer.start();
 
                     boolean statusSave = saveWave();
                     if(statusSave){
@@ -902,7 +915,6 @@ public class MainActivity extends AppCompatActivity implements
     private void offRecordWav(){
         recordStatus = RecordStatus.END;
         etRecordCurrentTime.setText(recordEndTime + "");
-        endRecordPlayer.stop();
 
         etRecordDelay.setEnabled(true);
         etRecordEndTime.setEnabled(true);
@@ -920,7 +932,13 @@ public class MainActivity extends AppCompatActivity implements
         String pathChild = etRecordName.getText() + "";
 
         try {
-            WavFile isSave = WavSaver.save(wave, durationRecord, pathParent, pathChild, this);
+            WavFile isSave;
+            try {
+                int HzWav = Integer.parseInt(etHzRecordSave.getText() + "");
+                isSave = WavSaver.save(wave, durationRecord, HzWav, pathParent, pathChild, this);
+            } catch (NumberFormatException e){
+                isSave = WavSaver.save(wave, durationRecord, HzRecordSave, pathParent, pathChild, this);
+            }
 
             wave.clear();
             return isSave != null ? true : false;
@@ -1041,11 +1059,6 @@ public class MainActivity extends AppCompatActivity implements
             @RequiresApi(api = Build.VERSION_CODES.O)
             @Override
             public void run() {
-                //TODO Сделать оповещение о разрыве связи
-                //Toast.makeText(MainActivity.this, "CONNECTION LOST!", Toast.LENGTH_SHORT).show();
-                etConsole.setText(lastSensorValues);
-                etConsole.setMovementMethod(movementMethod);
-
                 HashMap<String, String> dataSensor = parseData(lastSensorValues);
                 if (dataSensor != null) {
                     if (dataSensor.containsKey("VAL") && dataSensor.containsKey("TIME")) {
