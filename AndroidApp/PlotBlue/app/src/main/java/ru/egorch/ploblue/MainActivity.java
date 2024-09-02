@@ -15,9 +15,9 @@ import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
-import android.support.annotation.Nullable;
-import android.support.annotation.RequiresApi;
-import android.support.v7.app.AppCompatActivity;
+//import android.support.annotation.Nullable;
+//import android.support.annotation.RequiresApi;
+//import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -38,6 +38,10 @@ import android.widget.RelativeLayout;
 import android.widget.Switch;
 import android.widget.Toast;
 
+import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AppCompatActivity;
+
 import com.jjoe64.graphview.GraphView;
 import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
@@ -55,8 +59,9 @@ import java.util.Set;
 import ru.egorch.ploblue.filters.HPFilter;
 import ru.egorch.ploblue.filters.LPFilter;
 import ru.egorch.ploblue.filters.OptimalRunningArithmeticFilter;
-import ru.egorch.ploblue.wav.WavFile;
-import ru.egorch.ploblue.wav.WavFileException;
+import ru.egorch.ploblue.graphpng.GraphSaver;
+import ru.egorch.ploblue.wav.WavSaver;
+import ru.egorch.ploblue.wave.WaveMap;
 
 public class MainActivity extends AppCompatActivity implements
         CompoundButton.OnCheckedChangeListener,
@@ -108,7 +113,9 @@ public class MainActivity extends AppCompatActivity implements
 
 
     //Запись образца/////
-    private List<Double> wave;
+    //private List<Double> waveV;
+    //private List<Double> waveT;
+    private WaveMap wave;
     private RecordStatus recordStatus = RecordStatus.END;
     private double recordEndTime = 0.0;
     private double recordDelay = 0.0;
@@ -172,7 +179,6 @@ public class MainActivity extends AppCompatActivity implements
 
         //ИНИЦИАЛИЗАЦИЯ ИНДИКАТОРА РАБОТЫ
         indicator = findViewById(R.id.indicator);
-
         //Инициализация кнопок упровлением записи
         btnSerialOn = findViewById(R.id.serial_on);
         btnSerialOff = findViewById(R.id.serial_off);
@@ -213,7 +219,9 @@ public class MainActivity extends AppCompatActivity implements
         }
 
         //Инициализация массива содержащего волну
-        wave = new ArrayList<>();
+        //waveV = new ArrayList<>();
+        //waveT = new ArrayList<>();
+        wave = new WaveMap();
         etRecordName = findViewById(R.id.et_record_name);
         etRecordDelay = findViewById(R.id.et_delay_record);
         etRecordDelay.setText("60");
@@ -301,6 +309,7 @@ public class MainActivity extends AppCompatActivity implements
     /**
      * Поставить в режим ожидания
      */
+    @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     protected void onResume() {
         super.onResume();
@@ -536,6 +545,7 @@ public class MainActivity extends AppCompatActivity implements
     /**
      * Активировать поиск устройств или отключить
      */
+    @RequiresApi(api = Build.VERSION_CODES.M)
     private void enableSearch() {
         if (bluetoothAdapter.isDiscovering()) {
             bluetoothAdapter.cancelDiscovery();
@@ -577,6 +587,7 @@ public class MainActivity extends AppCompatActivity implements
     /**
      * Запрос на разрешение данных о местоположении (для Marshmallow 6.0)
      */
+    @RequiresApi(api = Build.VERSION_CODES.M)
     private void accessLocationPermission() {
         int accessCoarseLocation = this.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION);
         int accessFineLocation   = this.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION);
@@ -806,12 +817,25 @@ public class MainActivity extends AppCompatActivity implements
     /**
      * Включить запись
      */
+    /*
     @RequiresApi(api = Build.VERSION_CODES.O)
-    private synchronized void recordWav(double val){
+    private synchronized void recordWave(double val, double time){
         if(recordStatus == RecordStatus.PREPARE){
             decrementRecordDelay();
         } else if(recordStatus == RecordStatus.PROCESS) {
             wave.add(val);
+            incrementRecordTime();
+        }
+    }
+     */
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    private synchronized void recordWave(double val, double time){
+        if(recordStatus == RecordStatus.PREPARE){
+            decrementRecordDelay();
+        } else if(recordStatus == RecordStatus.PROCESS) {
+            //waveV.add(val);
+            //waveT.add(time);
+            wave.addRecord(val, time);
             incrementRecordTime();
         }
     }
@@ -899,6 +923,8 @@ public class MainActivity extends AppCompatActivity implements
                         Toast.makeText(MainActivity.this, "SUCCESSFULLY SAVE!", Toast.LENGTH_SHORT).show();
                     }
 
+                    //waveV.clear();
+                    //waveT.clear();
                     wave.clear();
                     Toast.makeText(MainActivity.this, "__RECORD END__", Toast.LENGTH_SHORT).show();
                 }
@@ -931,22 +957,17 @@ public class MainActivity extends AppCompatActivity implements
         String pathParent = Environment.getExternalStorageDirectory() + "/MRecord/samples";
         String pathChild = etRecordName.getText() + "";
 
+        boolean isSaveWav;
         try {
-            WavFile isSave;
-            try {
-                int HzWav = Integer.parseInt(etHzRecordSave.getText() + "");
-                isSave = WavSaver.save(wave, durationRecord, HzWav, pathParent, pathChild, this);
-            } catch (NumberFormatException e){
-                isSave = WavSaver.save(wave, durationRecord, HzRecordSave, pathParent, pathChild, this);
-            }
-
-            wave.clear();
-            return isSave != null ? true : false;
-        } catch (IOException | WavFileException e) {
-
-            Toast.makeText(MainActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
-            return false;
+            int HzWav = Integer.parseInt(etHzRecordSave.getText() + "");
+            isSaveWav = WavSaver.save(wave.getPoints(), durationRecord, HzWav, pathParent, pathChild, this);
+        } catch (NumberFormatException e){
+            isSaveWav = WavSaver.save(wave.getPoints(), durationRecord, HzRecordSave, pathParent, pathChild, this);
         }
+
+        boolean isSaveGraph = GraphSaver.drawNSave(wave, pathParent, pathChild, this);
+
+        return isSaveWav || isSaveGraph;
     }
     ///////////////////////////////////////////////////////////////////////////////
 
@@ -1072,7 +1093,7 @@ public class MainActivity extends AppCompatActivity implements
                         }
 
                         if(recordStatus == RecordStatus.PREPARE || recordStatus == RecordStatus.PROCESS){
-                            recordWav(value);
+                            recordWave(value, time);
                         }
 
                         xLastValue = time;
