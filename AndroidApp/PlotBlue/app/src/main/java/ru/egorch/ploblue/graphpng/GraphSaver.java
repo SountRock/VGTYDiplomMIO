@@ -75,9 +75,13 @@ public class GraphSaver extends Saver{
             //////////////////////////////
 
             //Y///////////////////////////Улетает вершина
-            double KY = (w.getValue() - min) / maxValue;
-            Y = bitmap.getHeight() - (int) Math.round( (bitmap.getHeight() / 2) * KY ) - (int) Math.round( (w.getValue() / lastYDouble) * 10) - 40;
+            //double KY = (w.getValue() - min) / maxValue;
+            double KY1 = (w.getValue() - min) / maxValue;
+            double KY2 = (w.getValue() - lastYDouble) / maxValue;
+            //Y = bitmap.getHeight() - (int) Math.round( (bitmap.getHeight() / 2) * KY ) - (int) Math.round( (w.getValue() / lastYDouble) * 10) - 40;
+            Y = bitmap.getHeight() - (int) Math.round( (bitmap.getHeight() / 4) * KY1 + (bitmap.getHeight() / 4) * KY2 ) - 40;
             Y = Y < 0 ? 0 : Y;
+            //Y = bitmap.getHeight() - (int) Math.round( (bitmap.getHeight() / 2) * KY ) - 40;
             //////////////////////////////
 
             graphics.drawLine(penWave, lastX, lastY, X, Y);

@@ -15,13 +15,10 @@ float EMGVal = 0;
 
 //analize
 float currentTime = 0.0;
-float RMS = 0.0;
-const int RMSNumberOfSamples = 5;
-float arrRMS[100];
-int countRMS = 0;
+float delayViewPhase = 0.0;
 
 //filter
-const int NUM_READ = 10; 
+const int NUM_READ = 100; 
 float k = 0.4;  // filtration coefficient, 0.0-1.0
 float Klf = 0.1;
 float Khf = 0.9;
@@ -60,24 +57,25 @@ void loop() {
 
   if(writeSignal){
     currentTime = millis()/1000.0;
-    lcd.setCursor(5, 1);
-    lcd.print(currentTime);
 
     //Part2: get a signal after filtering high and low frequencies
     EMGVal = analogRead(EMGPin);
+    /*
     EMGValc = DCRemover(EMGVal);  // Highpass
     EMGVal = LPF(abs(EMGValc), EMGVal, Klf); // Lowpass 
-  
-    //Part3: calculate parametrs
-    //calcRMS(); 
-  
-    //Part4: filtering out the signal
+ 
     EMGVal = optimalRunningArithmeticFilter(EMGVal);
+    */
 
     //Part5: view signal on display
-    lcd.setCursor(4, 0);
-    lcd.print(EMGVal);
-    Serial.println(EMGVal);
+    if(currentTime > delayViewPhase){
+        lcd.setCursor(5, 1);
+        lcd.print(currentTime);
+        lcd.setCursor(4, 0);
+        lcd.print(EMGVal);
+        delayViewPhase = currentTime + 1.0;
+    }
+    //Serial.println(EMGVal);
 
     //Bluetooth view
     bluetoothPush.print("(VAL:"); 
@@ -88,7 +86,7 @@ void loop() {
     bluetoothPush.println();
   }
   
-  delay(10); 
+  //delay(10); 
 }
 
 
@@ -108,6 +106,7 @@ void printStatus(){
 */
 void tryCheckMessage(){
   //WRITE_OR_NOT//---------------------------------------------------
+  //*
   char message = bluetoothPull.read();
   if (bluetoothPull.available()) {
     if(message == '1'){
@@ -120,24 +119,6 @@ void tryCheckMessage(){
   //WRITE_OR_NOT//---------------------------------------------------
 }
 
-/**
-  * iteration of RMS calculation
-*/
-void calcRMS(){
-    countRMS++;
-    if(countRMS > RMSNumberOfSamples){
-      countRMS = 0;
-      float sum = 0;
-      for(int i = 0; i < RMSNumberOfSamples; i++){
-        sum += arrRMS[i] * arrRMS[i];
-      }
-      RMS = sqrt(sum / RMSNumberOfSamples);
-
-      free(arrRMS);
-    } else {
-      arrRMS[countRMS] = EMGVal;
-    }
-}
 
 /**
   * filters out the signal by the optimal running arithmetic mean

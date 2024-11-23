@@ -46,14 +46,22 @@ import com.jjoe64.graphview.GraphView;
 import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
 
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
+
 import java.io.BufferedInputStream;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import ru.egorch.ploblue.filters.HPFilter;
@@ -133,6 +141,7 @@ public class MainActivity extends AppCompatActivity implements
     private MediaPlayer startRecordPlayer;
     private MediaPlayer endRecordPlayer;
     private EditText etHzRecordSave;
+    private Map<String, String> waveArr;
 
     //Изменение параметров фильрации/////
     private Button LPFButton;
@@ -219,8 +228,7 @@ public class MainActivity extends AppCompatActivity implements
         }
 
         //Инициализация массива содержащего волну
-        //waveV = new ArrayList<>();
-        //waveT = new ArrayList<>();
+        waveArr = new HashMap<>();
         wave = new WaveMap();
         etRecordName = findViewById(R.id.et_record_name);
         etRecordDelay = findViewById(R.id.et_delay_record);
@@ -372,6 +380,8 @@ public class MainActivity extends AppCompatActivity implements
                 offRecordWav();
 
                 boolean statusSave = saveWave();
+
+                saveWaveDS();
                 if(statusSave){
                     Toast.makeText(MainActivity.this, "SUCCESSFULLY SAVE!", Toast.LENGTH_SHORT).show();
                 } else {
@@ -836,6 +846,7 @@ public class MainActivity extends AppCompatActivity implements
             //waveV.add(val);
             //waveT.add(time);
             wave.addRecord(val, time);
+            waveArr.put(val+"", time+"");
             incrementRecordTime();
         }
     }
@@ -968,6 +979,30 @@ public class MainActivity extends AppCompatActivity implements
         boolean isSaveGraph = GraphSaver.drawNSave(wave, pathParent, pathChild, this);
 
         return isSaveWav || isSaveGraph;
+    }
+
+    /**
+     * Сохранить образец как dataset
+     */
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    private void saveWaveDS(){
+        String pathParent = Environment.getExternalStorageDirectory() + "/MRecord/samples";
+        String pathChild = etRecordName.getText() + "";
+
+        try (
+                BufferedWriter writer = Files.newBufferedWriter(Paths.get(pathParent + "/" + pathChild));
+
+                CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT
+                        .withHeader("Time", "Value"));
+        ) {
+            for (Map.Entry<String, String> entry : waveArr.entrySet()) {
+                csvPrinter.printRecord(entry.getKey(), entry.getValue());
+            }
+
+            csvPrinter.flush();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
     ///////////////////////////////////////////////////////////////////////////////
 
